@@ -1779,7 +1779,7 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
     fvs_free_vec(&csa->work);
 #endif
     /* return to calling program */
-    xprintf("Columns with negative reduced costs: ");
+    xprintf("Columns with \"wrong\" sign reduced costs: ");
     IndexNode *current = csa->lp->negative_reduced_costs;
     while (current != NULL) {
         xprintf("%d ", current->index);
