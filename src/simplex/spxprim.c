@@ -1779,10 +1779,19 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
     fvs_free_vec(&csa->work);
 #endif
     /* return to calling program */
-    xprintf("Columns with \"wrong\" sign reduced costs: ");
+    char filename[256];
+    if (P->name == NULL) {
+        snprintf(filename, sizeof(filename), "%s", "benchmark.out");
+    } else {
+        snprintf(filename, sizeof(filename), "%s%s", P->name, "_benchmark.out");
+    }
+    FILE *f = fopen(filename, "w");
+    fprintf(f, "%d # n\n", csa->lp->n);
+    fprintf(f, "%d # m\n", csa->lp->m);
+    fprintf(f, "%d # nonzeros\n", csa->lp->nnz);
     IndexNode *current = csa->lp->negative_reduced_costs;
     while (current != NULL) {
-        xprintf("%d ", current->index);
+        fprintf(f, "%d ", current->index);
         current = current->next;
     }
     xprintf("\n");
