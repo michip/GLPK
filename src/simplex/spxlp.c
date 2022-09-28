@@ -814,4 +814,13 @@ int spx_update_invb(SPXLP *lp, int i, int k)
       return ret;
 }
 
+
+void insert_negative_reduced_cost_index(struct SPXLP *lp, int index)
+{
+    struct IndexNode *new_node  = (struct IndexNode*)malloc(sizeof(struct IndexNode));
+    new_node->index = index;
+    new_node->next = lp->negative_reduced_costs;
+    lp->negative_reduced_costs = new_node;
+}
+
 /* eof */

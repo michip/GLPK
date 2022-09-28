@@ -88,6 +88,13 @@
 *  of matrix A that correspond to non-basic variables xN. */
 
 typedef struct SPXLP SPXLP;
+typedef struct IndexNode IndexNode;
+
+struct IndexNode
+{
+    int index;
+    struct IndexNode *next;
+};
 
 struct SPXLP
 {     /* LP problem data and its (current) basis */
@@ -150,7 +157,12 @@ struct SPXLP
       /* factorization validity flag */
       BFD *bfd;
       /* driver to factorization of the basis matrix */
+
+      struct IndexNode *negative_reduced_costs;
 };
+
+#define insert_negative_reduced_cost_index _glp_insert_negative_reduced_cost_index
+void insert_negative_reduced_cost_index(struct SPXLP *lp, int index);
 
 #define spx_factorize _glp_spx_factorize
 int spx_factorize(SPXLP *lp);

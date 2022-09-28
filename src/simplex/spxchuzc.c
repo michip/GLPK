@@ -94,8 +94,10 @@ int spx_chuzc_sel(SPXLP *lp, const double d[/*1+n-m*/], double tol,
          }
          /* xN[j] is eligible non-basic variable */
          num++;
-         if (list != NULL)
-            list[num] = j;
+         if (list != NULL) {
+             list[num] = j;
+             insert_negative_reduced_cost_index(lp, j);
+         }
       }
       return num;
 }
