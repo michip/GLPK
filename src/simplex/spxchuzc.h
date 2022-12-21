@@ -23,11 +23,16 @@
 #define SPXCHUZC_H
 
 #include "spxlp.h"
+#define SEC_TO_US(sec) ((sec)*1000000)
+#define NS_TO_US(ns)    ((ns)/1000)
 
 #define spx_chuzc_sel _glp_spx_chuzc_sel
 int spx_chuzc_sel(SPXLP *lp, const double d[/*1+n-m*/], double tol,
       double tol1, int list[/*1+n-m*/]);
 /* select eligible non-basic variables */
+
+#define spx_micros _glp_spx_micros
+uint64_t micros();
 
 #define spx_chuzc_std _glp_spx_chuzc_std
 int spx_chuzc_std(SPXLP *lp, const double d[/*1+n-m*/], int num,

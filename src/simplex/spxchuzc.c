@@ -50,56 +50,61 @@
 *  number of such variables 0 <= num <= n-m. (If the parameter list is
 *  specified as NULL, no indices are stored.) */
 
+uint64_t micros() {
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    uint64_t us = SEC_TO_US((uint64_t) ts.tv_sec) + NS_TO_US((uint64_t) ts.tv_nsec);
+    return us;
+}
+
 int spx_chuzc_sel(SPXLP *lp, const double d[/*1+n-m*/], double tol,
-      double tol1, int list[/*1+n-m*/])
-{     int m = lp->m;
-      int n = lp->n;
-      double *c = lp->c;
-      double *l = lp->l;
-      double *u = lp->u;
-      int *head = lp->head;
-      char *flag = lp->flag;
-      int j, k, num;
-      double ck, eps;
-      num = 0;
-      /* walk thru list of non-basic variables */
-      for (j = 1; j <= n-m; j++)
-      {  k = head[m+j]; /* x[k] = xN[j] */
-         if (l[k] == u[k])
-         {  /* xN[j] is fixed variable; skip it */
+                  double tol1, int list[/*1+n-m*/]) {
+    int m = lp->m;
+    int n = lp->n;
+    double *c = lp->c;
+    double *l = lp->l;
+    double *u = lp->u;
+    int *head = lp->head;
+    char *flag = lp->flag;
+    int j, k, num;
+    double ck, eps;
+    num = 0;
+
+    int candidates = 0;
+    /* walk thru list of non-basic variables */
+    for (j = 1; j <= n - m; j++) {
+        k = head[m + j]; /* x[k] = xN[j] */
+        if (l[k] == u[k]) {  /* xN[j] is fixed variable; skip it */
             continue;
-         }
-         /* determine absolute tolerance eps[j] */
-         ck = c[k];
-         eps = tol + tol1 * (ck >= 0.0 ? +ck : -ck);
-         /* check if xN[j] is eligible */
-         if (d[j] <= -eps)
-         {  /* xN[j] should be able to increase */
-            if (flag[j])
-            {  /* but its upper bound is active */
-               continue;
+        }
+        /* determine absolute tolerance eps[j] */
+        ck = c[k];
+        eps = tol + tol1 * (ck >= 0.0 ? +ck : -ck);
+        /* check if xN[j] is eligible */
+        if (d[j] <= -eps) {  /* xN[j] should be able to increase */
+            if (flag[j]) {  /* but its upper bound is active */
+                continue;
             }
-         }
-         else if (d[j] >= +eps)
-         {  /* xN[j] should be able to decrease */
-            if (!flag[j] && l[k] != -DBL_MAX)
-            {  /* but its lower bound is active */
-               continue;
+        } else if (d[j] >= +eps) {  /* xN[j] should be able to decrease */
+            if (!flag[j] && l[k] != -DBL_MAX) {  /* but its lower bound is active */
+                continue;
             }
-         }
-         else /* -eps < d[j] < +eps */
-         {  /* xN[j] does not affect the objective function within the
+        } else /* -eps < d[j] < +eps */
+        {  /* xN[j] does not affect the objective function within the
              * specified tolerance */
             continue;
-         }
-         /* xN[j] is eligible non-basic variable */
-         num++;
-         if (list != NULL) {
-             list[num] = j;
-             insert_negative_reduced_cost_index(lp, j);
-         }
-      }
-      return num;
+        }
+        /* xN[j] is eligible non-basic variable */
+        num++;
+        if (list != NULL) {
+            list[num] = j;
+            candidates++;
+        }
+    }
+
+    insert_negative_reduced_cost_index(lp, candidates, 0);
+
+    return num;
 }
 
 /***********************************************************************
@@ -126,21 +131,21 @@ int spx_chuzc_sel(SPXLP *lp, const double d[/*1+n-m*/], double tol,
 *  xN[q] chosen. */
 
 int spx_chuzc_std(SPXLP *lp, const double d[/*1+n-m*/], int num,
-      const int list[])
-{     int m = lp->m;
-      int n = lp->n;
-      int j, q, t;
-      double abs_dj, abs_dq;
-      xassert(0 < num && num <= n-m);
-      q = 0, abs_dq = -1.0;
-      for (t = 1; t <= num; t++)
-      {  j = list[t];
-         abs_dj = (d[j] >= 0.0 ? +d[j] : -d[j]);
-         if (abs_dq < abs_dj)
+                  const int list[]) {
+    int m = lp->m;
+    int n = lp->n;
+    int j, q, t;
+    double abs_dj, abs_dq;
+    xassert(0 < num && num <= n - m);
+    q = 0, abs_dq = -1.0;
+    for (t = 1; t <= num; t++) {
+        j = list[t];
+        abs_dj = (d[j] >= 0.0 ? +d[j] : -d[j]);
+        if (abs_dq < abs_dj)
             q = j, abs_dq = abs_dj;
-      }
-      xassert(q != 0);
-      return q;
+    }
+    xassert(q != 0);
+    return q;
 }
 
 /***********************************************************************
@@ -149,14 +154,14 @@ int spx_chuzc_std(SPXLP *lp, const double d[/*1+n-m*/], int num,
 *  This routine allocates the memory for arrays used in the pricing
 *  data block. */
 
-void spx_alloc_se(SPXLP *lp, SPXSE *se)
-{     int m = lp->m;
-      int n = lp->n;
-      se->valid = 0;
-      se->refsp = talloc(1+n, char);
-      se->gamma = talloc(1+n-m, double);
-      se->work = talloc(1+m, double);
-      return;
+void spx_alloc_se(SPXLP *lp, SPXSE *se) {
+    int m = lp->m;
+    int n = lp->n;
+    se->valid = 0;
+    se->refsp = talloc(1 + n, char);
+    se->gamma = talloc(1 + n - m, double);
+    se->work = talloc(1 + m, double);
+    return;
 }
 
 /***********************************************************************
@@ -166,21 +171,21 @@ void spx_alloc_se(SPXLP *lp, SPXSE *se)
 *  it from variables which are non-basic in the current basis, and sets
 *  all weights gamma[j] to 1. */
 
-void spx_reset_refsp(SPXLP *lp, SPXSE *se)
-{     int m = lp->m;
-      int n = lp->n;
-      int *head = lp->head;
-      char *refsp = se->refsp;
-      double *gamma = se->gamma;
-      int j, k;
-      se->valid = 1;
-      memset(&refsp[1], 0, n * sizeof(char));
-      for (j = 1; j <= n-m; j++)
-      {  k = head[m+j]; /* x[k] = xN[j] */
-         refsp[k] = 1;
-         gamma[j] = 1.0;
-      }
-      return;
+void spx_reset_refsp(SPXLP *lp, SPXSE *se) {
+    int m = lp->m;
+    int n = lp->n;
+    int *head = lp->head;
+    char *refsp = se->refsp;
+    double *gamma = se->gamma;
+    int j, k;
+    se->valid = 1;
+    memset(&refsp[1], 0, n * sizeof(char));
+    for (j = 1; j <= n - m; j++) {
+        k = head[m + j]; /* x[k] = xN[j] */
+        refsp[k] = 1;
+        gamma[j] = 1.0;
+    }
+    return;
 }
 
 /***********************************************************************
@@ -205,25 +210,25 @@ void spx_reset_refsp(SPXLP *lp, SPXSE *se)
 *
 *  NOTE: For testing/debugging only. */
 
-double spx_eval_gamma_j(SPXLP *lp, SPXSE *se, int j)
-{     int m = lp->m;
-      int n = lp->n;
-      int *head = lp->head;
-      char *refsp = se->refsp;
-      double *tcol = se->work;
-      int i, k;
-      double gamma_j;
-      xassert(se->valid);
-      xassert(1 <= j && j <= n-m);
-      k = head[m+j]; /* x[k] = xN[j] */
-      gamma_j = (refsp[k] ? 1.0 : 0.0);
-      spx_eval_tcol(lp, j, tcol);
-      for (i = 1; i <= m; i++)
-      {  k = head[i]; /* x[k] = xB[i] */
-         if (refsp[k])
+double spx_eval_gamma_j(SPXLP *lp, SPXSE *se, int j) {
+    int m = lp->m;
+    int n = lp->n;
+    int *head = lp->head;
+    char *refsp = se->refsp;
+    double *tcol = se->work;
+    int i, k;
+    double gamma_j;
+    xassert(se->valid);
+    xassert(1 <= j && j <= n - m);
+    k = head[m + j]; /* x[k] = xN[j] */
+    gamma_j = (refsp[k] ? 1.0 : 0.0);
+    spx_eval_tcol(lp, j, tcol);
+    for (i = 1; i <= m; i++) {
+        k = head[i]; /* x[k] = xB[i] */
+        if (refsp[k])
             gamma_j += tcol[i] * tcol[i];
-      }
-      return gamma_j;
+    }
+    return gamma_j;
 }
 
 /***********************************************************************
@@ -251,27 +256,27 @@ double spx_eval_gamma_j(SPXLP *lp, SPXSE *se, int j)
 *  xN[q] chosen. */
 
 int spx_chuzc_pse(SPXLP *lp, SPXSE *se, const double d[/*1+n-m*/],
-      int num, const int list[])
-{     int m = lp->m;
-      int n = lp->n;
-      double *gamma = se->gamma;
-      int j, q, t;
-      double best, temp;
-      xassert(se->valid);
-      xassert(0 < num && num <= n-m);
-      q = 0, best = -1.0;
-      for (t = 1; t <= num; t++)
-      {  j = list[t];
-         /* FIXME */
-         if (gamma[j] < DBL_EPSILON)
+                  int num, const int list[]) {
+    int m = lp->m;
+    int n = lp->n;
+    double *gamma = se->gamma;
+    int j, q, t;
+    double best, temp;
+    xassert(se->valid);
+    xassert(0 < num && num <= n - m);
+    q = 0, best = -1.0;
+    for (t = 1; t <= num; t++) {
+        j = list[t];
+        /* FIXME */
+        if (gamma[j] < DBL_EPSILON)
             temp = 0.0;
-         else
+        else
             temp = (d[j] * d[j]) / gamma[j];
-         if (best < temp)
+        if (best < temp)
             q = j, best = temp;
-      }
-      xassert(q != 0);
-      return q;
+    }
+    xassert(q != 0);
+    return q;
 }
 
 /***********************************************************************
@@ -308,60 +313,58 @@ int spx_chuzc_pse(SPXLP *lp, SPXSE *se, const double d[/*1+n-m*/],
 *  be inaccurate.) */
 
 double spx_update_gamma(SPXLP *lp, SPXSE *se, int p, int q,
-      const double trow[/*1+n-m*/], const double tcol[/*1+m*/])
-{     int m = lp->m;
-      int n = lp->n;
-      int *head = lp->head;
-      char *refsp = se->refsp;
-      double *gamma = se->gamma;
-      double *u = se->work;
-      int i, j, k, ptr, end;
-      double gamma_q, delta_q, e, r, s, t1, t2;
-      xassert(se->valid);
-      xassert(1 <= p && p <= m);
-      xassert(1 <= q && q <= n-m);
-      /* compute gamma[q] in current basis more accurately; also
-       * compute auxiliary vector u */
-      k = head[m+q]; /* x[k] = xN[q] */
-      gamma_q = delta_q = (refsp[k] ? 1.0 : 0.0);
-      for (i = 1; i <= m; i++)
-      {  k = head[i]; /* x[k] = xB[i] */
-         if (refsp[k])
-         {  gamma_q += tcol[i] * tcol[i];
+                        const double trow[/*1+n-m*/], const double tcol[/*1+m*/]) {
+    int m = lp->m;
+    int n = lp->n;
+    int *head = lp->head;
+    char *refsp = se->refsp;
+    double *gamma = se->gamma;
+    double *u = se->work;
+    int i, j, k, ptr, end;
+    double gamma_q, delta_q, e, r, s, t1, t2;
+    xassert(se->valid);
+    xassert(1 <= p && p <= m);
+    xassert(1 <= q && q <= n - m);
+    /* compute gamma[q] in current basis more accurately; also
+     * compute auxiliary vector u */
+    k = head[m + q]; /* x[k] = xN[q] */
+    gamma_q = delta_q = (refsp[k] ? 1.0 : 0.0);
+    for (i = 1; i <= m; i++) {
+        k = head[i]; /* x[k] = xB[i] */
+        if (refsp[k]) {
+            gamma_q += tcol[i] * tcol[i];
             u[i] = tcol[i];
-         }
-         else
+        } else
             u[i] = 0.0;
-      }
-      bfd_btran(lp->bfd, u);
-      /* compute relative error in gamma[q] */
-      e = fabs(gamma_q - gamma[q]) / (1.0 + gamma_q);
-      /* compute new gamma[q] */
-      gamma[q] = gamma_q / (tcol[p] * tcol[p]);
-      /* compute new gamma[j] for all j != q */
-      for (j = 1; j <= n-m; j++)
-      {  if (j == q)
+    }
+    bfd_btran(lp->bfd, u);
+    /* compute relative error in gamma[q] */
+    e = fabs(gamma_q - gamma[q]) / (1.0 + gamma_q);
+    /* compute new gamma[q] */
+    gamma[q] = gamma_q / (tcol[p] * tcol[p]);
+    /* compute new gamma[j] for all j != q */
+    for (j = 1; j <= n - m; j++) {
+        if (j == q)
             continue;
-         if (-1e-9 < trow[j] && trow[j] < +1e-9)
-         {  /* T[p,j] is close to zero; gamma[j] is not changed */
+        if (-1e-9 < trow[j] && trow[j] < +1e-9) {  /* T[p,j] is close to zero; gamma[j] is not changed */
             continue;
-         }
-         /* compute r[j] = T[p,j] / T[p,q] */
-         r = trow[j] / tcol[p];
-         /* compute inner product s[j] = N'[j] * u, where N[j] = A[k]
-          * is constraint matrix column corresponding to xN[j] */
-         s = 0.0;
-         k = head[m+j]; /* x[k] = xN[j] */
-         ptr = lp->A_ptr[k];
-         end = lp->A_ptr[k+1];
-         for (; ptr < end; ptr++)
+        }
+        /* compute r[j] = T[p,j] / T[p,q] */
+        r = trow[j] / tcol[p];
+        /* compute inner product s[j] = N'[j] * u, where N[j] = A[k]
+         * is constraint matrix column corresponding to xN[j] */
+        s = 0.0;
+        k = head[m + j]; /* x[k] = xN[j] */
+        ptr = lp->A_ptr[k];
+        end = lp->A_ptr[k + 1];
+        for (; ptr < end; ptr++)
             s += lp->A_val[ptr] * u[lp->A_ind[ptr]];
-         /* compute new gamma[j] */
-         t1 = gamma[j] + r * (r * gamma_q + s + s);
-         t2 = (refsp[k] ? 1.0 : 0.0) + delta_q * r * r;
-         gamma[j] = (t1 >= t2 ? t1 : t2);
-      }
-      return e;
+        /* compute new gamma[j] */
+        t1 = gamma[j] + r * (r * gamma_q + s + s);
+        t2 = (refsp[k] ? 1.0 : 0.0) + delta_q * r * r;
+        gamma[j] = (t1 >= t2 ? t1 : t2);
+    }
+    return e;
 }
 
 /***********************************************************************
@@ -370,12 +373,12 @@ double spx_update_gamma(SPXLP *lp, SPXSE *se, int p, int q,
 *  This routine deallocates the memory used for arrays in the pricing
 *  data block. */
 
-void spx_free_se(SPXLP *lp, SPXSE *se)
-{     xassert(lp == lp);
-      tfree(se->refsp);
-      tfree(se->gamma);
-      tfree(se->work);
-      return;
+void spx_free_se(SPXLP *lp, SPXSE *se) {
+    xassert(lp == lp);
+    tfree(se->refsp);
+    tfree(se->gamma);
+    tfree(se->work);
+    return;
 }
 
 /* eof */

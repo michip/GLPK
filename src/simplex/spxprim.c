@@ -1109,7 +1109,10 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
      *  0 = perturbation is not used and disabled
      * +1 = perturbation is being used */
     int j, refct, ret;
+    uint64_t startInverse1, endInverse1, startInverse2, endInverse2, startReducedCost, endReducedCost, startPivot, endPivot;
     loop: /* main loop starts here */
+    startInverse1 = micros();
+
     /* compute factorization of the basis matrix */
     if (!lp->valid) {
         double cond;
@@ -1197,6 +1200,10 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     }
     /* at this point the search phase is determined */
     xassert(csa->phase == 1 || csa->phase == 2);
+
+    endInverse1 = micros();
+
+    startReducedCost = micros();
     /* compute reduced costs of non-basic variables d = (d[j]) */
     if (!csa->d_st) {
         spx_eval_pi(lp, pi);
@@ -1210,6 +1217,8 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     /* at this point the basis factorization and all basic solution
      * components are valid */
     xassert(lp->valid && csa->beta_st && csa->d_st);
+
+    endReducedCost = micros();
 #if CHECK_ACCURACY
     /* check accuracy of current basic solution components (only for
      * debugging) */
@@ -1257,6 +1266,8 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     }
     /* display the search progress */
     display(csa, 0);
+
+    startPivot = micros();
     /* select eligible non-basic variables */
     switch (csa->phase) {
         case 1:
@@ -1313,17 +1324,9 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         }
     }
     /* choose xN[q] and xB[p] */
-#if 0 /* 23/VI-2017 */
-#if 0 /* 17/III-2016 */
-    choose_pivot(csa);
-#else
-    if (choose_pivot(csa) < 0)
-    {  lp->valid = 0;
-       goto loop;
-    }
-#endif
-#else
+
     ret = choose_pivot(csa);
+
     if (ret < 0) {
         lp->valid = 0;
         goto loop;
@@ -1332,7 +1335,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         csa->ns_cnt++;
     else
         csa->ls_cnt++;
-#endif
+
     /* check for unboundedness */
     if (csa->p == 0) {
         if (perturb > 0) {  /* remove perturbation */
@@ -1366,7 +1369,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
                 xassert(csa != csa);
         }
     }
-#if 1 /* 01/VII-2017 */
+
     /* check for stalling */
     if (csa->p > 0) {
         int k;
@@ -1399,14 +1402,10 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
             skip1:;
         }
     }
-#endif
-        /* update values of basic variables for adjacent basis */
-#if 0 /* 11/VI-2017 */
-        spx_update_beta(lp, beta, csa->p, csa->p_flag, csa->q, tcol);
-#else
+
+    /* update values of basic variables for adjacent basis */
     spx_update_beta_s(lp, beta, csa->p, csa->p_flag, csa->q,
                       &csa->tcol);
-#endif
     csa->beta_st = 2;
     /* p < 0 means that xN[q] jumps to its opposite bound */
     if (csa->p < 0)
@@ -1415,22 +1414,14 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     /* compute p-th row of inv(B) */
     spx_eval_rho(lp, csa->p, rho);
     /* compute p-th (pivot) row of the simplex table */
-#if 0 /* 11/VI-2017 */
-    if (at != NULL)
-       spx_eval_trow1(lp, at, rho, trow);
-    else
-       spx_nt_prod(lp, nt, trow, 1, -1.0, rho);
-#else
+
     if (at != NULL)
         spx_eval_trow1(lp, at, rho, csa->trow.vec);
     else
         spx_nt_prod(lp, nt, csa->trow.vec, 1, -1.0, rho);
     fvs_gather_vec(&csa->trow, DBL_EPSILON);
-#endif
     /* FIXME: tcol[p] and trow[q] should be close to each other */
-#if 0 /* 26/V-2017 by cmatraki */
-    xassert(trow[csa->q] != 0.0);
-#else
+
     if (csa->trow.vec[csa->q] == 0.0) {
         if (msg_lev >= GLP_MSG_ERR)
             xprintf("Error: trow[q] = 0.0\n");
@@ -1438,20 +1429,17 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         ret = GLP_EFAIL;
         goto fini;
     }
-#endif
+
+    endPivot = micros();
+    startInverse2 = micros();
     /* update reduced costs of non-basic variables for adjacent
      * basis */
-#if 1 /* 23/VI-2017 */
+
     /* dual solution may be invalidated due to long step */
     if (csa->d_st)
-#endif
-#if 0 /* 11/VI-2017 */
-        if (spx_update_d(lp, d, csa->p, csa->q, trow, tcol) <= 1e-9)
-#else
+
         if (spx_update_d_s(lp, d, csa->p, csa->q, &csa->trow, &csa->tcol)
-            <= 1e-9)
-#endif
-        {  /* successful updating */
+            <= 1e-9) {  /* successful updating */
             csa->d_st = 2;
             if (csa->phase == 1) {  /* adjust reduced cost of xN[q] in adjacent basis, since
              * its penalty coefficient changes (see below) */
@@ -1466,16 +1454,9 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     }
     /* update steepest edge weights for adjacent basis, if used */
     if (se != NULL) {
-        if (refct > 0)
-#if 0 /* 11/VI-2017 */
-            {  if (spx_update_gamma(lp, se, csa->p, csa->q, trow, tcol)
-                  <= 1e-3)
-#else /* FIXME: spx_update_gamma_s */
-        {
+        if (refct > 0) {
             if (spx_update_gamma(lp, se, csa->p, csa->q, csa->trow.vec,
-                                 csa->tcol.vec) <= 1e-3)
-#endif
-            {  /* successful updating */
+                                 csa->tcol.vec) <= 1e-3) {  /* successful updating */
                 refct--;
             } else {  /* new weights are inaccurate; reset reference space */
                 se->valid = 0;
@@ -1492,7 +1473,6 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     /* and update factorization of the basis matrix */
     if (csa->p > 0)
         spx_update_invb(lp, csa->p, head[csa->p]);
-#if 1
     if (perturb <= 0) {
         if (csa->phase == 1) {
             int cnt;
@@ -1508,9 +1488,16 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     } else {  /* FIXME */
         play_bounds(csa, 0);
     }
-#endif
+
+    endInverse2 = micros();
+
     /* simplex iteration complete */
     csa->it_cnt++;
+    lp->negative_reduced_costs->pivotTime = endPivot - startPivot;
+    lp->negative_reduced_costs->reducedCostTime = endReducedCost - startReducedCost;
+    lp->negative_reduced_costs->inverseTime = endInverse1 - startInverse1;
+    lp->negative_reduced_costs->inverseTime2 = endInverse2 - startInverse1;
+
     goto loop;
     fini: /* restore original objective function */
     memcpy(c, csa->orig_c, (1 + n) * sizeof(double));
@@ -1794,7 +1781,38 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
         fprintf(f, "%d ", current->index);
         current = current->next;
     }
+    fprintf(f, "\n");
     xprintf("\n");
+
+    current = csa->lp->negative_reduced_costs;
+    while (current != NULL) {
+        fprintf(f, "%lld ", current->inverseTime);
+        current = current->next;
+    }
+
+    fprintf(f, "\n");
+    current = csa->lp->negative_reduced_costs;
+    while (current != NULL) {
+        fprintf(f, "%lld ", current->inverseTime2);
+        current = current->next;
+    }
+
+    fprintf(f, "\n");
+    current = csa->lp->negative_reduced_costs;
+    while (current != NULL) {
+        fprintf(f, "%lld ", current->reducedCostTime);
+        current = current->next;
+    }
+
+    fprintf(f, "\n");
+    current = csa->lp->negative_reduced_costs;
+    while (current != NULL) {
+        fprintf(f, "%lld ", current->pivotTime);
+        current = current->next;
+    }
+
+    xprintf("\n");
+
     return ret;
 }
 

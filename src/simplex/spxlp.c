@@ -815,10 +815,11 @@ int spx_update_invb(SPXLP *lp, int i, int k)
 }
 
 
-void insert_negative_reduced_cost_index(struct SPXLP *lp, int index)
+void insert_negative_reduced_cost_index(struct SPXLP *lp, int index, uint64_t pivotTime)
 {
     struct IndexNode *new_node  = (struct IndexNode*)malloc(sizeof(struct IndexNode));
     new_node->index = index;
+    new_node->pivotTime = pivotTime;
     new_node->next = lp->negative_reduced_costs;
     lp->negative_reduced_costs = new_node;
 }
