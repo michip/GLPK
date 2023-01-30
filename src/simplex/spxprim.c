@@ -1437,7 +1437,6 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
 
     /* dual solution may be invalidated due to long step */
     if (csa->d_st)
-
         if (spx_update_d_s(lp, d, csa->p, csa->q, &csa->trow, &csa->tcol)
             <= 1e-9) {  /* successful updating */
             csa->d_st = 2;
@@ -1493,10 +1492,10 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
 
     /* simplex iteration complete */
     csa->it_cnt++;
-    lp->negative_reduced_costs->pivotTime = endPivot - startPivot;
-    lp->negative_reduced_costs->reducedCostTime = endReducedCost - startReducedCost;
-    lp->negative_reduced_costs->inverseTime = endInverse1 - startInverse1;
-    lp->negative_reduced_costs->inverseTime2 = endInverse2 - startInverse1;
+    lp->iteration_info->pivotTime = endPivot - startPivot;
+    lp->iteration_info->reducedCostTime = endReducedCost - startReducedCost;
+    lp->iteration_info->inverseTime = endInverse1 - startInverse1;
+    lp->iteration_info->inverseTime2 = endInverse2 - startInverse2;
 
     goto loop;
     fini: /* restore original objective function */
@@ -1776,36 +1775,74 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
     fprintf(f, "%d # n\n", csa->lp->n);
     fprintf(f, "%d # m\n", csa->lp->m);
     fprintf(f, "%d # nonzeros\n", csa->lp->nnz);
-    IndexNode *current = csa->lp->negative_reduced_costs;
+
+    double max_c = -DBL_MAX;
+
+    for (int x = 1; x <= csa->lp->n; x++) {
+        if(csa->lp->c[x] > max_c) {
+            max_c = csa->lp->c[x];
+        }
+    }
+    fprintf(f, "%lf # max c", max_c);
+
+    fprintf(f, "\ncandidateColumns: ");
+    IndexNode *current = csa->lp->iteration_info;
     while (current != NULL) {
-        fprintf(f, "%d ", current->index);
+        fprintf(f, "%d ", current->candidateColumns);
         current = current->next;
     }
-    fprintf(f, "\n");
-    xprintf("\n");
 
-    current = csa->lp->negative_reduced_costs;
+    fprintf(f, "\nnonZerosInBasisColumn: ");
+    current = csa->lp->iteration_info;
+    while (current != NULL) {
+        fprintf(f, "%d ", current->max_nonzeros_in_basis_column);
+        current = current->next;
+    }
+
+    fprintf(f, "\nbasis-1-norm: ");
+    current = csa->lp->iteration_info;
+    while (current != NULL) {
+        fprintf(f, "%lf ", current->baseNorm);
+        current = current->next;
+    }
+
+    fprintf(f, "\nbasis-inverse-1-norm: ");
+    current = csa->lp->iteration_info;
+    while (current != NULL) {
+        fprintf(f, "%lf ", current->inverseBaseNorm);
+        current = current->next;
+    }
+
+    fprintf(f, "\nconditionNumber: ");
+    current = csa->lp->iteration_info;
+    while (current != NULL) {
+        fprintf(f, "%lf ", current->conditionNumber);
+        current = current->next;
+    }
+
+    fprintf(f, "\ninverseTime: ");
+    current = csa->lp->iteration_info;
     while (current != NULL) {
         fprintf(f, "%lld ", current->inverseTime);
         current = current->next;
     }
 
-    fprintf(f, "\n");
-    current = csa->lp->negative_reduced_costs;
+    fprintf(f, "\ninverseTime2: ");
+    current = csa->lp->iteration_info;
     while (current != NULL) {
         fprintf(f, "%lld ", current->inverseTime2);
         current = current->next;
     }
 
-    fprintf(f, "\n");
-    current = csa->lp->negative_reduced_costs;
+    fprintf(f, "\nreducedCostTime: ");
+    current = csa->lp->iteration_info;
     while (current != NULL) {
         fprintf(f, "%lld ", current->reducedCostTime);
         current = current->next;
     }
 
-    fprintf(f, "\n");
-    current = csa->lp->negative_reduced_costs;
+    fprintf(f, "\npivotTime: ");
+    current = csa->lp->iteration_info;
     while (current != NULL) {
         fprintf(f, "%lld ", current->pivotTime);
         current = current->next;

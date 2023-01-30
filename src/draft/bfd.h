@@ -66,6 +66,12 @@ double bfd_condest(BFD *bfd);
 /* estimate condition of B */
 #endif
 
+#define bfd_b_norm _glp_b_norm
+double bfd_b_norm(BFD *bfd);
+
+#define bfd_i_norm _glp_i_norm
+double bfd_i_norm(BFD *bfd);
+
 #define bfd_ftran _glp_bfd_ftran
 void bfd_ftran(BFD *bfd, double x[]);
 /* perform forward transformation (solve system B*x = b) */

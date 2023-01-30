@@ -25,7 +25,8 @@
 #include "fhvint.h"
 #include "scfint.h"
 #ifdef GLP_DEBUG
-#include "glpspm.h"
+#include <stdio.h>
+#include "spm.h"
 #endif
 
 struct BFD
@@ -257,7 +258,7 @@ int bfd_factorize(BFD *bfd, int m, /*const int bh[],*/ int (*col1)
          double *val = talloc(1+m, double);
          int j, k, len;
          for (j = 1; j <= m; j++)
-         {  len = col(info, j, ind, val);
+         {  len = info.col(info.info, j, ind, val);
             for (k = 1; k <= len; k++)
                spm_new_elem(bfd->B, ind[k], j, val[k]);
          }
@@ -281,28 +282,6 @@ int bfd_factorize(BFD *bfd, int m, /*const int bh[],*/ int (*col1)
       bfd->upd_cnt = 0;
       return ret;
 }
-
-#if 0 /* 21/IV-2014 */
-double bfd_estimate(BFD *bfd)
-{     /* estimate 1-norm of inv(B) */
-      double norm;
-      xassert(bfd->valid);
-      xassert(bfd->upd_cnt == 0);
-      switch (bfd->type)
-      {  case 1:
-            norm = fhvint_estimate(bfd->u.fhvi);
-            break;
-         case 2:
-            norm = scfint_estimate(bfd->u.scfi);
-            break;
-         default:
-            xassert(bfd != bfd);
-      }
-      return norm;
-}
-#endif
-
-#if 1 /* 21/IV-2014 */
 double bfd_condest(BFD *bfd)
 {     /* estimate condition of B */
       double cond;
@@ -313,7 +292,18 @@ double bfd_condest(BFD *bfd)
          cond = 1.0;
       return cond;
 }
-#endif
+
+double bfd_b_norm(BFD *bfd)
+{     /* estimate condition of B */
+    xassert(bfd->valid);
+    return bfd->b_norm;
+}
+
+double bfd_i_norm(BFD *bfd)
+{     /* estimate condition of B */
+    xassert(bfd->valid);
+    return bfd->i_norm;
+}
 
 void bfd_ftran(BFD *bfd, double x[])
 {     /* perform forward transformation (solve system B * x = b) */

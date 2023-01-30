@@ -21,6 +21,8 @@
 
 #include "env.h"
 #include "npp.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 /***********************************************************************
 *  NAME
@@ -796,7 +798,7 @@ int npp_integer(NPP *npp, const glp_iocp *parm)
          xprintf("%d constraint coefficient(s) were reduced\n", count);
       /*==============================================================*/
 #ifdef GLP_DEBUG
-      routine(npp);
+      //routine(npp);
 #endif
       /*==============================================================*/
       /* all seems ok */

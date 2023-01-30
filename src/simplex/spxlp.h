@@ -92,11 +92,15 @@ typedef struct IndexNode IndexNode;
 
 struct IndexNode
 {
-    int index;
+    int candidateColumns;
     uint64_t inverseTime;
     uint64_t inverseTime2;
     uint64_t reducedCostTime;
     uint64_t pivotTime;
+    double baseNorm;
+    double inverseBaseNorm;
+    double conditionNumber;
+    int max_nonzeros_in_basis_column;
     struct IndexNode *next;
 };
 
@@ -162,11 +166,11 @@ struct SPXLP
       BFD *bfd;
       /* driver to factorization of the basis matrix */
 
-      struct IndexNode *negative_reduced_costs;
+      struct IndexNode *iteration_info;
 };
 
 #define insert_negative_reduced_cost_index _glp_insert_negative_reduced_cost_index
-void insert_negative_reduced_cost_index(struct SPXLP *lp, int index, uint64_t pivotTime);
+void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, uint64_t pivotTime);
 
 #define spx_factorize _glp_spx_factorize
 int spx_factorize(SPXLP *lp);
