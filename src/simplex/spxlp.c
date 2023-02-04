@@ -742,7 +742,6 @@ void spx_change_basis(SPXLP *lp, int p, int p_flag, int q) {
         /* and set active bound flag for new xN[q] */
         lp->flag[q] = p_flag;
     }
-    return;
 }
 
 /***********************************************************************
@@ -779,29 +778,33 @@ int spx_update_invb(SPXLP *lp, int i, int k) {
 }
 
 
-void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, uint64_t pivotTime) {
+void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, uint64_t pivotTime, double absMaxReducedCost) {
     struct IndexNode *new_node = (struct IndexNode *) malloc(sizeof(struct IndexNode));
 
     // Determine zeros in columns
     int *ind = talloc(1 + lp->m, int);
     double *val = talloc(1 + lp->m, double);
-    int max_zeros = 0;
+    int maxNonZeros = 0;
+    int totalNonZeros = 0;
     for (int j = 1; j <= lp->m; j++) {
-        int col_zeros = lp->m - jth_col(lp, j, ind, val);
-        if (col_zeros > max_zeros) {
-            max_zeros = col_zeros;
+        int colNonZeros = lp->m - jth_col(lp, j, ind, val);
+        totalNonZeros += colNonZeros;
+        if (colNonZeros > maxNonZeros) {
+            maxNonZeros = colNonZeros;
         }
     }
 
     xfree(ind);
     xfree(val);
 
-    new_node->max_nonzeros_in_basis_column = max_zeros;
+    new_node->maxNonzerosInBasisColumn = maxNonZeros;
+    new_node->nonzerosInBasis = totalNonZeros;
     new_node->baseNorm = bfd_b_norm(lp->bfd);
     new_node->inverseBaseNorm = bfd_i_norm(lp->bfd);
     new_node->conditionNumber = bfd_condest(lp->bfd);
     new_node->candidateColumns = candidateColumns;
     new_node->pivotTime = pivotTime;
+    new_node->absMaxReducedCost = absMaxReducedCost;
     new_node->next = lp->iteration_info;
     lp->iteration_info = new_node;
 }

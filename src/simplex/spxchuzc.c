@@ -69,8 +69,6 @@ int spx_chuzc_sel(SPXLP *lp, const double d[/*1+n-m*/], double tol,
     int j, k, num;
     double ck, eps;
     num = 0;
-
-    int candidates = 0;
     /* walk thru list of non-basic variables */
     for (j = 1; j <= n - m; j++) {
         k = head[m + j]; /* x[k] = xN[j] */
@@ -96,13 +94,11 @@ int spx_chuzc_sel(SPXLP *lp, const double d[/*1+n-m*/], double tol,
         }
         /* xN[j] is eligible non-basic variable */
         num++;
+
         if (list != NULL) {
             list[num] = j;
-            candidates++;
         }
     }
-
-    insert_negative_reduced_cost_index(lp, candidates, 0);
 
     return num;
 }

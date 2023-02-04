@@ -87,16 +87,13 @@ struct csa {     /* common storage area */
      * variables xN[j] */
     int q;
     /* xN[q] is a non-basic variable chosen to enter the basis */
-#if 0 /* 11/VI-2017 */
-    double *tcol; /* double tcol[1+m]; */
-#else
+
     FVS tcol; /* FVS tcol[1:m]; */
-#endif
     /* q-th (pivot) column of the simplex table */
-#if 1 /* 23/VI-2017 */
+
     SPXBP *bp; /* SPXBP bp[1+2*m+1]; */
     /* penalty function break points */
-#endif
+
     int p;
     /* xB[p] is a basic variable chosen to leave the basis;
      * p = 0 means that no basic variable reaches its bound;
@@ -105,37 +102,26 @@ struct csa {     /* common storage area */
     int p_flag;
     /* if this flag is set, the active bound of xB[p] in the adjacent
      * basis should be set to the upper bound */
-#if 0 /* 11/VI-2017 */
-    double *trow; /* double trow[1+n-m]; */
-#else
+
     FVS trow; /* FVS trow[1:n-m]; */
-#endif
     /* p-th (pivot) row of the simplex table */
-#if 0 /* 09/VII-2017 */
-    double *work; /* double work[1+m]; */
-    /* working array */
-#else
+
     FVS work; /* FVS work[1:m]; */
     /* working vector */
-#endif
+
     int p_stat, d_stat;
     /* primal and dual solution statuses */
     /*--------------------------------------------------------------*/
     /* control parameters (see struct glp_smcp) */
     int msg_lev;
     /* message level */
-#if 0 /* 23/VI-2017 */
-    int harris;
-    /* ratio test technique:
-     * 0 - textbook ratio test
-     * 1 - Harris' two pass ratio test */
-#else
+
     int r_test;
     /* ratio test technique:
      * GLP_RT_STD  - textbook ratio test
      * GLP_RT_HAR  - Harris' two pass ratio test
      * GLP_RT_FLIP - long-step ratio test (only for phase I) */
-#endif
+
     double tol_bnd, tol_bnd1;
     /* primal feasibility tolerances */
     double tol_dj, tol_dj1;
@@ -147,11 +133,8 @@ struct csa {     /* common storage area */
     int tm_lim;
     /* time limit, milliseconds */
     int out_frq;
-#if 0 /* 15/VII-2017 */
-    /* display output frequency, iterations */
-#else
+
     /* display output frequency, milliseconds */
-#endif
     int out_dly;
     /* display output delay, milliseconds */
     /*--------------------------------------------------------------*/
@@ -166,21 +149,16 @@ struct csa {     /* common storage area */
      * jumps to its opposite bound) */
     int it_dpy;
     /* simplex iteration count at most recent display output */
-#if 1 /* 15/VII-2017 */
+
     double tm_dpy;
     /* time value at most recent display output */
-#endif
     int inv_cnt;
     /* basis factorization count since most recent display output */
-#if 1 /* 01/VII-2017 */
     int degen;
     /* count of successive degenerate iterations; this count is used
      * to detect stalling */
-#endif
-#if 1 /* 23/VI-2017 */
     int ns_cnt, ls_cnt;
     /* normal and long-step iteration counts */
-#endif
 };
 
 /***********************************************************************
@@ -355,44 +333,6 @@ tol1) {
 *  The routine returns the number of objective coefficients which were
 *  set to zero. */
 
-#if 0
-static int adjust_penalty(struct csa *csa, double tol, double tol1)
-{     SPXLP *lp = csa->lp;
-      int m = lp->m;
-      double *c = lp->c;
-      double *l = lp->l;
-      double *u = lp->u;
-      int *head = lp->head;
-      double *beta = csa->beta;
-      int i, k, count = 0;
-      double t, eps;
-      xassert(csa->phase == 1);
-      /* walk thru the list of basic variables */
-      for (i = 1; i <= m; i++)
-      {  k = head[i]; /* x[k] = xB[i] */
-         if (c[k] < 0.0)
-         {  /* x[k] violates its original lower bound l[k] */
-            xassert((t = l[k]) != -DBL_MAX);
-            eps = tol + tol1 * (t >= 0.0 ? +t : -t);
-            if (beta[i] >= t - eps)
-            {  /* however, violation is close to zero */
-               c[k] = 0.0, count++;
-            }
-         }
-         else if (c[k] > 0.0)
-         {  /* x[k] violates its original upper bound u[k] */
-            xassert((t = u[k]) != +DBL_MAX);
-            eps = tol + tol1 * (t >= 0.0 ? +t : -t);
-            if (beta[i] <= t + eps)
-            {  /* however, violation is close to zero */
-               c[k] = 0.0, count++;
-            }
-         }
-      }
-      return count;
-}
-#else
-
 static int adjust_penalty(struct csa *csa, int num, const int
 ind[/*1+num*/], double tol, double tol1) {
     SPXLP *lp = csa->lp;
@@ -428,8 +368,6 @@ ind[/*1+num*/], double tol, double tol1) {
     }
     return cnt;
 }
-
-#endif
 
 #if CHECK_ACCURACY
 /***********************************************************************
@@ -563,7 +501,6 @@ static void check_accuracy(struct csa *csa)
 *  the routine attempts to choose another xN[q] and xB[p] in order to
 *  avoid badly conditioned adjacent bases. */
 
-#if 1 /* 17/III-2016 */
 #define MIN_RATIO 0.0001
 
 static int choose_pivot(struct csa *csa) {
@@ -571,63 +508,46 @@ static int choose_pivot(struct csa *csa) {
     int m = lp->m;
     int n = lp->n;
     double *beta = csa->beta;
-    double *d = csa->d;
+    double *d = csa->d; // reduced cost
     SPXSE *se = csa->se;
     int *list = csa->list;
-#if 0 /* 09/VII-2017 */
-    double *tcol = csa->work;
-#else
     double *tcol = csa->work.vec;
-#endif
     double tol_piv = csa->tol_piv;
     int try, nnn, /*i,*/ p, p_flag, q, t;
     double big, /*temp,*/ best_ratio;
-#if 1 /* 23/VI-2017 */
     double *c = lp->c;
     int *head = lp->head;
     SPXBP *bp = csa->bp;
     int nbp, t_best, ret, k;
     double dz_best;
-#endif
     xassert(csa->beta_st);
     xassert(csa->d_st);
     more: /* initial number of eligible non-basic variables */
-    nnn = csa->num;
+    nnn = csa->num; // Number of eligible non-basic variables (with the correct sign in the reduced cost)
     /* nothing has been chosen so far */
     csa->q = 0;
     best_ratio = 0.0;
-#if 0 /* 23/VI-2017 */
-    try = 0;
-#else
     try = ret = 0;
-#endif
     try:  /* choose non-basic variable xN[q] */
     xassert(nnn > 0);
     try++;
+    uint64_t startPivot = micros();
     if (se == NULL) {  /* Dantzig's rule */
         q = spx_chuzc_std(lp, d, nnn, list);
     } else {  /* projected steepest edge */
         q = spx_chuzc_pse(lp, se, d, nnn, list);
     }
+    uint64_t endPivot = micros();
+
     xassert(1 <= q && q <= n - m);
+
     /* compute q-th column of the simplex table */
     spx_eval_tcol(lp, q, tcol);
-#if 0
-    /* big := max(1, |tcol[1]|, ..., |tcol[m]|) */
-    big = 1.0;
-    for (i = 1; i <= m; i++)
-    {  temp = tcol[i];
-       if (temp < 0.0)
-          temp = - temp;
-       if (big < temp)
-          big = temp;
-    }
-#else
+
     /* this still puzzles me */
     big = 1.0;
-#endif
     /* choose basic variable xB[p] */
-#if 1 /* 23/VI-2017 */
+
     if (csa->phase == 1 && csa->r_test == GLP_RT_FLIP && try <= 2) {  /* long-step ratio test */
         int t, num, num1;
         double slope, teta_lim;
@@ -659,17 +579,7 @@ static int choose_pivot(struct csa *csa) {
                     if (dz_best > bp[t].dz)
                         t_best = t, dz_best = bp[t].dz;
                 }
-#if 0
-                if (i == 0)
-                {  /* do not consider further break points beyond this
-                   * point, where xN[q] reaches its opposite bound;
-                   * in principle (see spx_ls_eval_bp), this break
-                   * point should be the last one, however, due to
-                   * round-off errors there may be other break points
-                   * with the same teta beyond this one */
-                   slope = +1.0;
-                }
-#endif
+
             }
             if (slope > 0.0) {  /* penalty function starts increasing */
                 break;
@@ -704,21 +614,12 @@ static int choose_pivot(struct csa *csa) {
             csa->p_flag = 1;
             best_ratio = fabs(tcol[csa->p]) / big;
         }
-#if 0
-        xprintf("num1 = %d; t_best = %d; dz = %g\n", num1, t_best,
-           bp[t_best].dz);
-#endif
         ret = 1;
         goto done;
         skip:;
     }
-#endif
-#if 0 /* 23/VI-2017 */
-    if (!csa->harris)
-#else
-    if (csa->r_test == GLP_RT_STD)
-#endif
-    {  /* textbook ratio test */
+
+    if (csa->r_test == GLP_RT_STD) {  /* textbook ratio test */
         p = spx_chuzr_std(lp, csa->phase, beta, q,
                           d[q] < 0.0 ? +1. : -1., tcol, &p_flag, tol_piv,
                           .30 * csa->tol_bnd, .30 * csa->tol_bnd1);
@@ -729,12 +630,8 @@ static int choose_pivot(struct csa *csa) {
     }
     if (p <= 0) {  /* primal unboundedness or special case */
         csa->q = q;
-#if 0 /* 11/VI-2017 */
-        memcpy(&csa->tcol[1], &tcol[1], m * sizeof(double));
-#else
         memcpy(&csa->tcol.vec[1], &tcol[1], m * sizeof(double));
         fvs_gather_vec(&csa->tcol, DBL_EPSILON);
-#endif
         csa->p = p;
         csa->p_flag = p_flag;
         best_ratio = 1.0;
@@ -744,12 +641,8 @@ static int choose_pivot(struct csa *csa) {
      * which one is better */
     if (best_ratio < fabs(tcol[p]) / big) {
         csa->q = q;
-#if 0 /* 11/VI-2017 */
-        memcpy(&csa->tcol[1], &tcol[1], m * sizeof(double));
-#else
         memcpy(&csa->tcol.vec[1], &tcol[1], m * sizeof(double));
         fvs_gather_vec(&csa->tcol, DBL_EPSILON);
-#endif
         csa->p = p;
         csa->p_flag = p_flag;
         best_ratio = fabs(tcol[p]) / big;
@@ -769,7 +662,7 @@ static int choose_pivot(struct csa *csa) {
     /* repeat the choice */
     goto try;
     done: /* the choice has been made */
-#if 1 /* FIXME: currently just to avoid badly conditioned basis */
+    /* FIXME: currently just to avoid badly conditioned basis */
     if (best_ratio < .001 * MIN_RATIO) {  /* looks like this helps */
         if (bfd_get_count(lp->bfd) > 0)
             return -1;
@@ -779,10 +672,6 @@ static int choose_pivot(struct csa *csa) {
             goto more;
         }
     }
-#endif
-#if 0 /* 23/VI-2017 */
-    return 0;
-#else /* FIXME */
     if (ret) {  /* invalidate dual basic solution components */
         csa->d_st = 0;
         /* change penalty function coefficients at basic variables for
@@ -801,10 +690,7 @@ static int choose_pivot(struct csa *csa) {
         }
     }
     return ret;
-#endif
 }
-
-#endif
 
 /***********************************************************************
 *  play_bounds - play bounds of primal variables
@@ -1088,17 +974,9 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     double *d = csa->d;
     SPXSE *se = csa->se;
     int *list = csa->list;
-#if 0 /* 11/VI-2017 */
-    double *tcol = csa->tcol;
-    double *trow = csa->trow;
-#endif
-#if 0 /* 09/VII-2017 */
-    double *pi = csa->work;
-    double *rho = csa->work;
-#else
     double *pi = csa->work.vec;
     double *rho = csa->work.vec;
-#endif
+
     int msg_lev = csa->msg_lev;
     double tol_bnd = csa->tol_bnd;
     double tol_bnd1 = csa->tol_bnd1;
@@ -1167,7 +1045,6 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         if (perturb <= 0) {
             if (check_feas(csa, csa->phase, tol_bnd,
                            tol_bnd1)) {  /* excessive bound violations due to round-off errors */
-#if 1 /* 01/VII-2017 */
                 if (perturb < 0) {
                     if (msg_lev >= GLP_MSG_ALL)
                         xprintf("Perturbing LP to avoid instability [%d].."
@@ -1175,7 +1052,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
                     perturb = 1;
                     goto loop;
                 }
-#endif
+
                 if (msg_lev >= GLP_MSG_ERR)
                     xprintf("Warning: numerical instability (primal simpl"
                             "ex, phase %s)\n", csa->phase == 1 ? "I" : "II");
@@ -1279,6 +1156,26 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         default:
             xassert(csa != csa);
     }
+
+    {
+        // Log iteration
+        double maxReducedCost = 0;
+        int foundMaxReducedCost = 0;
+        for (int col = 1; col <= csa->num; col++) {
+            double reducedCost = d[list[col]];
+            if (fabs(reducedCost) > fabs(maxReducedCost)) {
+                maxReducedCost = reducedCost;
+                foundMaxReducedCost = 1;
+            }
+        }
+
+        if (foundMaxReducedCost == 0) {
+            maxReducedCost = -DBL_MAX;
+        }
+
+        insert_negative_reduced_cost_index(lp, csa->num, 0, maxReducedCost);
+    }
+
     /* check for optimality */
     if (csa->num == 0) {
         if (perturb > 0 && csa->phase == 2) {  /* remove perturbation */
@@ -1303,9 +1200,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
                     goto loop;
                 }
                 /* no feasible solution exists */
-#if 1 /* 09/VII-2017 */
                 /* FIXME: remove perturbation */
-#endif
                 if (msg_lev >= GLP_MSG_ALL)
                     xprintf("LP HAS NO PRIMAL FEASIBLE SOLUTION\n");
                 csa->p_stat = GLP_NOFEAS;
@@ -1436,7 +1331,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
      * basis */
 
     /* dual solution may be invalidated due to long step */
-    if (csa->d_st)
+    if (csa->d_st) {
         if (spx_update_d_s(lp, d, csa->p, csa->q, &csa->trow, &csa->tcol)
             <= 1e-9) {  /* successful updating */
             csa->d_st = 2;
@@ -1447,6 +1342,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         } else {  /* new reduced costs are inaccurate */
             csa->d_st = 0;
         }
+    }
     if (csa->phase == 1) {  /* xB[p] leaves the basis replacing xN[q], so set its penalty
           * coefficient to zero */
         c[head[csa->p]] = 0.0;
@@ -1513,6 +1409,10 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     return ret;
 }
 
+void exportBenchmark() {
+
+}
+
 int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal simplex method */
     struct csa csa_, *csa = &csa_;
     SPXLP lp;
@@ -1558,14 +1458,13 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
 #endif
     csa->orig_c = talloc(1 + csa->lp->n, double);
     memcpy(csa->orig_c, csa->lp->c, (1 + csa->lp->n) * sizeof(double));
-#if 1 /*PERTURB*/
+
+    /*PERTURB*/
     csa->orig_l = talloc(1 + csa->lp->n, double);
     memcpy(csa->orig_l, csa->lp->l, (1 + csa->lp->n) * sizeof(double));
     csa->orig_u = talloc(1 + csa->lp->n, double);
     memcpy(csa->orig_u, csa->lp->u, (1 + csa->lp->n) * sizeof(double));
-#else
-    csa->orig_l = csa->orig_u = NULL;
-#endif
+
     switch (parm->aorn) {
         case GLP_USE_AT:
             /* build matrix A in row-wise format */
@@ -1603,41 +1502,16 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
             xassert(parm != parm);
     }
     csa->list = talloc(1 + csa->lp->n - csa->lp->m, int);
-#if 0 /* 11/VI-2017 */
-    csa->tcol = talloc(1+csa->lp->m, double);
-    csa->trow = talloc(1+csa->lp->n-csa->lp->m, double);
-#else
+
     fvs_alloc_vec(&csa->tcol, csa->lp->m);
     fvs_alloc_vec(&csa->trow, csa->lp->n - csa->lp->m);
-#endif
-#if 1 /* 23/VI-2017 */
+
     csa->bp = NULL;
-#endif
-#if 0 /* 09/VII-2017 */
-    csa->work = talloc(1+csa->lp->m, double);
-#else
+
     fvs_alloc_vec(&csa->work, csa->lp->m);
-#endif
     /* initialize control parameters */
     csa->msg_lev = parm->msg_lev;
-#if 0 /* 23/VI-2017 */
-    switch (parm->r_test)
-    {  case GLP_RT_STD:
-          csa->harris = 0;
-          break;
-       case GLP_RT_HAR:
-#if 1 /* 16/III-2016 */
-       case GLP_RT_FLIP:
-          /* FIXME */
-          /* currently for primal simplex GLP_RT_FLIP is equivalent
-           * to GLP_RT_HAR */
-#endif
-          csa->harris = 1;
-          break;
-       default:
-          xassert(parm != parm);
-    }
-#else
+
     switch (parm->r_test) {
         case GLP_RT_STD:
         case GLP_RT_HAR:
@@ -1649,7 +1523,6 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
             xassert(parm != parm);
     }
     csa->r_test = parm->r_test;
-#endif
     csa->tol_bnd = parm->tol_bnd;
     csa->tol_bnd1 = .001 * parm->tol_bnd;
     csa->tol_dj = parm->tol_dj;
@@ -1663,16 +1536,10 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
     csa->tm_beg = xtime();
     csa->it_beg = csa->it_cnt = P->it_cnt;
     csa->it_dpy = -1;
-#if 1 /* 15/VII-2017 */
     csa->tm_dpy = 0.0;
-#endif
     csa->inv_cnt = 0;
-#if 1 /* 01/VII-2017 */
     csa->degen = 0;
-#endif
-#if 1 /* 23/VI-2017 */
     csa->ns_cnt = csa->ls_cnt = 0;
-#endif
     /* try to solve working LP */
     ret = primal_simplex(csa);
     /* return basis factorization back to problem object */
@@ -1691,11 +1558,9 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
     spx_store_basis(csa->lp, P, map, daeh);
     /* compute simplex multipliers for final basic solution found by
      * the solver */
-#if 0 /* 09/VII-2017 */
-    spx_eval_pi(csa->lp, csa->work);
-#else
+
     spx_eval_pi(csa->lp, csa->work.vec);
-#endif
+
     /* convert working LP solution to original LP solution and store
      * it into the problem object */
 #if SCALE_Z
@@ -1704,13 +1569,9 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
     for (j = 1; j <= csa->lp->n - csa->lp->m; j++)
         csa->d[j] *= csa->fz;
 #endif
-#if 0 /* 09/VII-2017 */
-    spx_store_sol(csa->lp, P, SHIFT, map, daeh, csa->beta, csa->work,
-       csa->d);
-#else
+
     spx_store_sol(csa->lp, P, parm->shift, map, daeh, csa->beta,
                   csa->work.vec, csa->d);
-#endif
     tfree(daeh);
     /* save simplex iteration count */
     P->it_cnt = csa->it_cnt;
@@ -1732,13 +1593,144 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
         xassert(P->some != 0);
     }
     skip: /* deallocate working objects and arrays */
+
+    {
+        /* return to calling program */
+        char filename[256];
+        snprintf(filename, sizeof(filename), "%s", "benchmark.out");
+
+        FILE *f = fopen(filename, "w");
+        fprintf(f, "%d # n\n", csa->lp->n);
+        fprintf(f, "%d # m\n", csa->lp->m);
+        fprintf(f, "%d # nonzeros\n", csa->lp->nnz);
+
+        double max_c = -DBL_MAX;
+        int max_nonzeros_in_column = 0;
+        double max_two_norm_in_column_or_b = 0;
+
+        for (int x = 1; x <= csa->lp->m; x++) {
+            max_two_norm_in_column_or_b += csa->lp->b[x] * csa->lp->b[x];
+        }
+
+        max_two_norm_in_column_or_b = sqrt(max_two_norm_in_column_or_b);
+
+        for (int x = 1; x <= csa->lp->n; x++) {
+            if (csa->lp->c[x] > max_c) {
+                max_c = csa->lp->c[x];
+            }
+
+            // update number of nonzeros
+            int nonzeros_in_col = csa->lp->A_ptr[x + 1] - csa->lp->A_ptr[x];
+            if (nonzeros_in_col > max_nonzeros_in_column) max_nonzeros_in_column = nonzeros_in_col;
+
+            // calculate 2-norm of each column
+            double two_norm = 0;
+            // TODO: Find out what is going on here
+            //xprintf("%d - %d (%d)\n", csa->lp->A_ptr[x], csa->lp->A_ptr[x + 1], csa->lp->nnz);
+            for (int y = csa->lp->A_ptr[x]; y < csa->lp->A_ptr[x + 1]; y++) {
+                two_norm += csa->lp->A_val[y] * csa->lp->A_val[y];
+            }
+
+            two_norm = sqrt(two_norm);
+            if (max_two_norm_in_column_or_b < two_norm) max_two_norm_in_column_or_b = two_norm;
+        }
+
+        fprintf(f, "%lf # max two norm in column or b / eta\n", max_two_norm_in_column_or_b);
+        fprintf(f, "%lf # max c\n", max_c);
+        fprintf(f, "%d # max nonzeros in A_j", max_nonzeros_in_column);
+
+
+        fprintf(f, "\ncandidateColumns: ");
+        IndexNode *current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%d ", current->candidateColumns);
+            current = current->next;
+        }
+
+        fprintf(f, "\nnonZerosInBasisColumn: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%d ", current->maxNonzerosInBasisColumn);
+            current = current->next;
+        }
+
+        fprintf(f, "\nbasis-1-norm: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%lf ", current->baseNorm);
+            current = current->next;
+        }
+
+        fprintf(f, "\nbasis-inverse-1-norm: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%lf ", current->inverseBaseNorm);
+            current = current->next;
+        }
+
+        fprintf(f, "\nconditionNumber: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%lf ", current->conditionNumber);
+            current = current->next;
+        }
+
+        fprintf(f, "\ninverseTime: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%lld ", current->inverseTime);
+            current = current->next;
+        }
+
+        fprintf(f, "\ninverseTime2: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%lld ", current->inverseTime2);
+            current = current->next;
+        }
+
+        fprintf(f, "\nreducedCostTime: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%lld ", current->reducedCostTime);
+            current = current->next;
+        }
+
+        fprintf(f, "\npivotTime: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%lld ", current->pivotTime);
+            current = current->next;
+        }
+
+        fprintf(f, "\nabsMaxReducedCost: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            if (current->absMaxReducedCost > -DBL_MAX) {
+                fprintf(f, "%lf ", current->absMaxReducedCost);
+            } else {
+                fprintf(f, "NULL ");
+            }
+            current = current->next;
+        }
+
+        fprintf(f, "\nnonZerosInBasis: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%d ", current->nonzerosInBasis);
+            current = current->next;
+        }
+
+        xprintf("Wrote benchmark.out file\n");
+    }
+
     spx_free_lp(csa->lp);
     tfree(map);
     tfree(csa->orig_c);
-#if 1 /*PERTURB*/
+
     tfree(csa->orig_l);
     tfree(csa->orig_u);
-#endif
+
     if (csa->at != NULL)
         spx_free_at(csa->lp, csa->at);
     if (csa->nt != NULL)
@@ -1748,107 +1740,14 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
     if (csa->se != NULL)
         spx_free_se(csa->lp, csa->se);
     tfree(csa->list);
-#if 0 /* 11/VI-2017 */
-    tfree(csa->tcol);
-    tfree(csa->trow);
-#else
+
     fvs_free_vec(&csa->tcol);
     fvs_free_vec(&csa->trow);
-#endif
-#if 1 /* 23/VI-2017 */
+
     if (csa->bp != NULL)
         tfree(csa->bp);
-#endif
-#if 0 /* 09/VII-2017 */
-        tfree(csa->work);
-#else
+
     fvs_free_vec(&csa->work);
-#endif
-    /* return to calling program */
-    char filename[256];
-    if (P->name == NULL) {
-        snprintf(filename, sizeof(filename), "%s", "benchmark.out");
-    } else {
-        snprintf(filename, sizeof(filename), "%s%s", P->name, "_benchmark.out");
-    }
-    FILE *f = fopen(filename, "w");
-    fprintf(f, "%d # n\n", csa->lp->n);
-    fprintf(f, "%d # m\n", csa->lp->m);
-    fprintf(f, "%d # nonzeros\n", csa->lp->nnz);
-
-    double max_c = -DBL_MAX;
-
-    for (int x = 1; x <= csa->lp->n; x++) {
-        if(csa->lp->c[x] > max_c) {
-            max_c = csa->lp->c[x];
-        }
-    }
-    fprintf(f, "%lf # max c", max_c);
-
-    fprintf(f, "\ncandidateColumns: ");
-    IndexNode *current = csa->lp->iteration_info;
-    while (current != NULL) {
-        fprintf(f, "%d ", current->candidateColumns);
-        current = current->next;
-    }
-
-    fprintf(f, "\nnonZerosInBasisColumn: ");
-    current = csa->lp->iteration_info;
-    while (current != NULL) {
-        fprintf(f, "%d ", current->max_nonzeros_in_basis_column);
-        current = current->next;
-    }
-
-    fprintf(f, "\nbasis-1-norm: ");
-    current = csa->lp->iteration_info;
-    while (current != NULL) {
-        fprintf(f, "%lf ", current->baseNorm);
-        current = current->next;
-    }
-
-    fprintf(f, "\nbasis-inverse-1-norm: ");
-    current = csa->lp->iteration_info;
-    while (current != NULL) {
-        fprintf(f, "%lf ", current->inverseBaseNorm);
-        current = current->next;
-    }
-
-    fprintf(f, "\nconditionNumber: ");
-    current = csa->lp->iteration_info;
-    while (current != NULL) {
-        fprintf(f, "%lf ", current->conditionNumber);
-        current = current->next;
-    }
-
-    fprintf(f, "\ninverseTime: ");
-    current = csa->lp->iteration_info;
-    while (current != NULL) {
-        fprintf(f, "%lld ", current->inverseTime);
-        current = current->next;
-    }
-
-    fprintf(f, "\ninverseTime2: ");
-    current = csa->lp->iteration_info;
-    while (current != NULL) {
-        fprintf(f, "%lld ", current->inverseTime2);
-        current = current->next;
-    }
-
-    fprintf(f, "\nreducedCostTime: ");
-    current = csa->lp->iteration_info;
-    while (current != NULL) {
-        fprintf(f, "%lld ", current->reducedCostTime);
-        current = current->next;
-    }
-
-    fprintf(f, "\npivotTime: ");
-    current = csa->lp->iteration_info;
-    while (current != NULL) {
-        fprintf(f, "%lld ", current->pivotTime);
-        current = current->next;
-    }
-
-    xprintf("\n");
 
     return ret;
 }

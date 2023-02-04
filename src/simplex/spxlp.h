@@ -100,7 +100,9 @@ struct IndexNode
     double baseNorm;
     double inverseBaseNorm;
     double conditionNumber;
-    int max_nonzeros_in_basis_column;
+    double absMaxReducedCost;
+    int maxNonzerosInBasisColumn;
+    int nonzerosInBasis;
     struct IndexNode *next;
 };
 
@@ -170,7 +172,7 @@ struct SPXLP
 };
 
 #define insert_negative_reduced_cost_index _glp_insert_negative_reduced_cost_index
-void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, uint64_t pivotTime);
+void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, uint64_t pivotTime, double absMaxReducedCost);
 
 #define spx_factorize _glp_spx_factorize
 int spx_factorize(SPXLP *lp);

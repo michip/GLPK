@@ -23,6 +23,7 @@
 #define SPXCHUZC_H
 
 #include "spxlp.h"
+#include "math.h"
 #define SEC_TO_US(sec) ((sec)*1000000)
 #define NS_TO_US(ns)    ((ns)/1000)
 
