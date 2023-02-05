@@ -23,6 +23,7 @@
 #define SPXLP_H
 
 #include "bfd.h"
+#include "stdint.h"
 
 /***********************************************************************
 *  The structure SPXLP describes LP problem and its current basis.
