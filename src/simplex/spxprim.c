@@ -1721,6 +1721,8 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
             current = current->next;
         }
 
+        fclose(f);
+
         xprintf("Wrote benchmark.out file\n");
     }
 
