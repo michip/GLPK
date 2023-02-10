@@ -787,7 +787,7 @@ void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, 
     int maxNonZeros = 0;
     int totalNonZeros = 0;
     for (int j = 1; j <= lp->m; j++) {
-        int colNonZeros = lp->m - jth_col(lp, j, ind, val);
+        int colNonZeros = jth_col(lp, j, ind, val);
         totalNonZeros += colNonZeros;
         if (colNonZeros > maxNonZeros) {
             maxNonZeros = colNonZeros;
