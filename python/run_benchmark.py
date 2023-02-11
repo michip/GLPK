@@ -58,7 +58,8 @@ def run_benchmark(executable: str, out_dir: str, benchmark_dir: str):
                 try:
                     start = timeit.default_timer()
                     process = subprocess.run(
-                        [os.path.abspath(executable), os.path.abspath(file_path), "--freemps", "--simplex", "--primal", "--tmlim 300"] + options
+                        [os.path.abspath(executable),
+                         os.path.abspath(file_path), "--freemps", "--simplex", "--primal", "--tmlim", "300"] + options
                         ,capture_output=True, text=True,
                         cwd=os.path.abspath(os.path.join(os.getcwd(), out_dir)))
                     stop = timeit.default_timer()
