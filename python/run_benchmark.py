@@ -9,7 +9,7 @@ from utils.config import PivotRule, RatioTest, BenchmarkConfig
 from utils.parse import read_benchmark
 
 slurminade.update_default_configuration(partition="alg",
-                                        constraint="alggen03")  # nodelist="algpc01", constraint="alggen02"
+                                        nodelist="algry03")  # nodelist="algpc01", constraint="alggen02"
 slurminade.set_dispatch_limit(50)
 
 
