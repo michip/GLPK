@@ -1598,7 +1598,6 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
         /* return to calling program */
         char filename[256];
         snprintf(filename, sizeof(filename), "%s", "benchmark.out");
-
         FILE *f = fopen(filename, "w");
         fprintf(f, "%d # n\n", csa->lp->n);
         fprintf(f, "%d # m\n", csa->lp->m);
@@ -1637,7 +1636,8 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
 
         fprintf(f, "%lf # max two norm in column or b / eta\n", max_two_norm_in_column_or_b);
         fprintf(f, "%lf # max c\n", max_c);
-        fprintf(f, "%d # max nonzeros in A_j", max_nonzeros_in_column);
+        fprintf(f, "%d # max nonzeros in A_j\n", max_nonzeros_in_column);
+        fprintf(f, "%d # solved optimally", ret == 0 && glp_get_status(P) == GLP_OPT);
 
 
         fprintf(f, "\ncandidateColumns: ");

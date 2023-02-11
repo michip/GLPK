@@ -9,13 +9,13 @@ from utils.config import PivotRule, RatioTest, BenchmarkConfig
 from utils.parse import read_benchmark
 
 slurminade.update_default_configuration(partition="alg",
-                                        nodelist="algry03")  # nodelist="algpc01", constraint="alggen02"
+                                        constraint="alggen03")  # nodelist="algpc01", constraint="alggen02"
 slurminade.set_dispatch_limit(50)
 
 
 @slurminade.slurmify
 def run_benchmark(executable: str, out_dir: str, benchmark_dir: str):
-    benchmarks = [BenchmarkConfig(PivotRule.STEEPEST_EDGE, RatioTest.HARRIS_TWO_PASS_RATIO),
+    benchmarks = [#BenchmarkConfig(PivotRule.STEEPEST_EDGE, RatioTest.HARRIS_TWO_PASS_RATIO),
                   BenchmarkConfig(PivotRule.DANZIG, RatioTest.HARRIS_TWO_PASS_RATIO)]
 
     current_results = read_as_pandas_table(out_dir)
@@ -58,8 +58,8 @@ def run_benchmark(executable: str, out_dir: str, benchmark_dir: str):
                 try:
                     start = timeit.default_timer()
                     process = subprocess.run(
-                        [os.path.abspath(executable), os.path.abspath(file_path), "--freemps", "--simplex", "--primal"] + options,
-                        timeout=300, capture_output=True, text=True,
+                        [os.path.abspath(executable), os.path.abspath(file_path), "--freemps", "--simplex", "--primal", "--tmlim 300"] + options
+                        ,capture_output=True, text=True,
                         cwd=os.path.abspath(os.path.join(os.getcwd(), out_dir)))
                     stop = timeit.default_timer()
 

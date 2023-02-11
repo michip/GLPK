@@ -12,8 +12,9 @@ def read_benchmark(file_path):
         max_two_norm_in_colum_or_b = float(lines[3].split()[0])
         max_c = float(lines[4].split()[0])
         max_nonzeros_in_aj = int(lines[5].split()[0])
+        solved_optimally = bool(int(lines[6].split()[0]))
 
-        per_iteration_start_index = 6
+        per_iteration_start_index = 7
 
         # per iterations
         basis_candidate_columns = parse_iteration_line(lines[per_iteration_start_index], int)
@@ -56,6 +57,7 @@ def read_benchmark(file_path):
     return {
         "n": n,
         "m": m,
+        "solved_optimally": solved_optimally,
         "iterations": iterations,
         "nonzeros": nonzeros,
         "max_c": max_c,
