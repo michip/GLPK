@@ -531,14 +531,11 @@ static int choose_pivot(struct csa *csa) {
     try:  /* choose non-basic variable xN[q] */
     xassert(nnn > 0);
     try++;
-    uint64_t startPivot = micros();
     if (se == NULL) {  /* Dantzig's rule */
         q = spx_chuzc_std(lp, d, nnn, list);
     } else {  /* projected steepest edge */
         q = spx_chuzc_pse(lp, se, d, nnn, list);
     }
-    uint64_t endPivot = micros();
-
     xassert(1 <= q && q <= n - m);
 
     /* compute q-th column of the simplex table */

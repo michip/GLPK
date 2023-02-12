@@ -797,6 +797,10 @@ void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, 
     xfree(ind);
     xfree(val);
 
+    new_node->inverseTime = 0;
+    new_node->inverseTime2 = 0;
+    new_node->reducedCostTime = 0;
+
     new_node->maxNonzerosInBasisColumn = maxNonZeros;
     new_node->nonzerosInBasis = totalNonZeros;
     new_node->baseNorm = bfd_b_norm(lp->bfd);
@@ -804,6 +808,7 @@ void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, 
     new_node->conditionNumber = bfd_condest(lp->bfd);
     new_node->candidateColumns = candidateColumns;
     new_node->pivotTime = pivotTime;
+
     new_node->absMaxReducedCost = absMaxReducedCost;
     new_node->next = lp->iteration_info;
     lp->iteration_info = new_node;

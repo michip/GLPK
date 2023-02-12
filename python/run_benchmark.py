@@ -15,8 +15,8 @@ slurminade.set_dispatch_limit(50)
 
 @slurminade.slurmify
 def run_benchmark(executable: str, out_dir: str, benchmark_dir: str):
-    benchmarks = [#BenchmarkConfig(PivotRule.STEEPEST_EDGE, RatioTest.HARRIS_TWO_PASS_RATIO),
-                  BenchmarkConfig(PivotRule.DANZIG, RatioTest.HARRIS_TWO_PASS_RATIO)]
+    benchmarks = [  # BenchmarkConfig(PivotRule.STEEPEST_EDGE, RatioTest.HARRIS_TWO_PASS_RATIO),
+        BenchmarkConfig(PivotRule.DANZIG, RatioTest.HARRIS_TWO_PASS_RATIO)]
 
     current_results = read_as_pandas_table(out_dir)
     benchmark_file = os.path.join(out_dir, "benchmark.out")
@@ -56,13 +56,13 @@ def run_benchmark(executable: str, out_dir: str, benchmark_dir: str):
                     raise ValueError()
 
                 try:
-                    start = timeit.default_timer()
+                    start_simplex = timeit.default_timer()
                     process = subprocess.run(
                         [os.path.abspath(executable),
-                         os.path.abspath(file_path), "--freemps", "--simplex", "--primal", "--tmlim", "300"] + options
-                        ,capture_output=True, text=True,
+                         os.path.abspath(file_path), "--freemps", "--simplex", "--primal", "--tmlim", "300"] + options,
+                        capture_output=True, text=True,
                         cwd=os.path.abspath(os.path.join(os.getcwd(), out_dir)))
-                    stop = timeit.default_timer()
+                    stop_simplex = timeit.default_timer()
 
                 except subprocess.TimeoutExpired:
                     continue
@@ -82,7 +82,7 @@ def run_benchmark(executable: str, out_dir: str, benchmark_dir: str):
                         m["solver_stdout"] = process.stdout
                         m["solver_stderr"] = process.stderr
 
-                        m["runtime"] = stop - start
+                        m["runtime"] = stop_simplex - start_simplex
                         m["instance"] = instance_name
 
                         if benchmark_config.pivot_rule == PivotRule.DANZIG:
