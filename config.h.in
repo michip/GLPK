@@ -27,8 +27,3 @@
 #undef TLS
 /* thread local storage-class specifier for re-entrancy (if any) */
 
-// Will cause GLPK to keep track of basis matrix, which we will then be able to print out.
-// C.f. draft/bfd.c/BFD
-#define GLP_DEBUG 1
-
-

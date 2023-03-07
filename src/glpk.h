@@ -29,6 +29,11 @@
 extern "C" {
 #endif
 
+// Will cause GLPK to keep track of basis matrix, which we will then be able to print out.
+// C.f. draft/bfd.c/BFD
+#define GLP_DEBUG 1
+
+
 /* library version numbers: */
 #define GLP_MAJOR_VERSION  5
 #define GLP_MINOR_VERSION  0
