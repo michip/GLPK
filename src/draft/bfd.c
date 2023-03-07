@@ -29,6 +29,11 @@
 #include "spm.h"
 #endif
 
+// Hack. Count number of matrices that have been written so far.
+// File name includes number.
+int outputFileNumber = 0;
+
+
 struct BFD
 {     /* LP basis factorization driver */
       int valid;
@@ -314,6 +319,14 @@ void bfd_ftran(BFD *bfd, double x[])
       SPME *e;
       int k;
       double s, relerr, maxerr;
+
+			
+			// Output basis matrix.
+			// Not super-clear whether this is the right place within the algorithm to do it.
+      char filename[50];
+      sprintf(filename, "out-%d.mat", outputFileNumber++);
+      spm_write_mat(B, filename);
+
       for (k = 1; k <= m; k++)
          b[k] = x[k];
 #endif
