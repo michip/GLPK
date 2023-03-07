@@ -569,7 +569,7 @@ done: if (pds != NULL) pds_close_file(pds);
 *  col[k], k = 1,...,nnz, are column indices;
 *  val[k], k = 1,...,nnz, are element values. */
 
-#if 1
+#if 0
 int spm_write_mat(const SPM *A, const char *fname)
 {     xassert(A != A);
       xassert(fname != fname);
@@ -579,11 +579,14 @@ int spm_write_mat(const SPM *A, const char *fname)
 int spm_write_mat(const SPM *A, const char *fname)
 {     FILE *fp;
       int i, nnz, ret = 0;
+
+			char buffer[256];  // for filename and error messages.
+
       xprintf("spm_write_mat: writing matrix to '%s'...\n", fname);
       fp = fopen(fname, "w");
       if (fp == NULL)
       {  xprintf("spm_write_mat: unable to create '%s' - %s\n", fname,
-            strerror(errno));
+            strerror_r(errno, buffer, 256));
          ret = 1;
          goto done;
       }
@@ -602,7 +605,7 @@ int spm_write_mat(const SPM *A, const char *fname)
       fflush(fp);
       if (ferror(fp))
       {  xprintf("spm_write_mat: writing error on '%s' - %s\n", fname,
-            strerror(errno));
+            strerror_r(errno, buffer, 256));
          ret = 1;
          goto done;
       }
