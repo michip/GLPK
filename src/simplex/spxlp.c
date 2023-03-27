@@ -778,7 +778,7 @@ int spx_update_invb(SPXLP *lp, int i, int k) {
 }
 
 
-void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, uint64_t pivotTime, double absMaxReducedCost) {
+void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, double absMaxReducedCost) {
     struct IndexNode *new_node = (struct IndexNode *) malloc(sizeof(struct IndexNode));
 
     // Determine zeros in columns
@@ -797,9 +797,7 @@ void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, 
     xfree(ind);
     xfree(val);
 
-    new_node->inverseTime = 0;
-    new_node->inverseTime2 = 0;
-    new_node->reducedCostTime = 0;
+    new_node->iterationTime = 0;
 
     new_node->maxNonzerosInBasisColumn = maxNonZeros;
     new_node->nonzerosInBasis = totalNonZeros;
@@ -807,9 +805,8 @@ void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, 
     new_node->inverseBaseNorm = bfd_i_norm(lp->bfd);
     new_node->conditionNumber = bfd_condest(lp->bfd);
     new_node->candidateColumns = candidateColumns;
-    new_node->pivotTime = pivotTime;
-
     new_node->absMaxReducedCost = absMaxReducedCost;
+
     new_node->next = lp->iteration_info;
     lp->iteration_info = new_node;
 }

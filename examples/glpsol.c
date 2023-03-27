@@ -62,9 +62,7 @@ struct csa
 #define FMT_MATHPROG    5  /* MathProg */
 #define FMT_MIN_COST    6  /* DIMACS min-cost flow */
 #define FMT_MAX_FLOW    7  /* DIMACS maximum flow */
-#if 1 /* 06/VIII-2011 */
 #define FMT_CNF         8  /* DIMACS CNF-SAT */
-#endif
       const char *in_file;
       /* name of input problem file */
 #define DATA_MAX 10
@@ -103,10 +101,8 @@ struct csa
       /* input data checking flag; no solution is performed */
       const char *new_name;
       /* new name to be assigned to the problem */
-#if 1 /* 18/I-2018 */
       int hide;
       /* clear all symbolic names in the problem object */
-#endif
       const char *out_mps;
       /* name of output problem file in fixed MPS format */
       const char *out_freemps;
@@ -115,16 +111,8 @@ struct csa
       /* name of output problem file in CPLEX LP format */
       const char *out_glp;
       /* name of output problem file in GLPK format */
-#if 0
-      const char *out_pb;
-      /* name of output problem file in OPB format */
-      const char *out_npb;
-      /* name of output problem file in normalized OPB format */
-#endif
-#if 1 /* 06/VIII-2011 */
       const char *out_cnf;
       /* name of output problem file in DIMACS CNF-SAT format */
-#endif
       const char *log_file;
       /* name of output file to hardcopy terminal output */
       int crash;
@@ -141,18 +129,14 @@ struct csa
       /* flag to check final basis with glp_exact */
       int nomip;
       /* flag to consider MIP as pure LP */
-#if 1 /* 15/VIII-2011 */
       int minisat;
       /* option to solve feasibility problem with MiniSat solver */
       int use_bnd;
       /* option to bound objective function */
       int obj_bnd;
       /* upper (minization) or lower (maximization) objective bound */
-#endif
-#if 1 /* 11/VII-2013 */
       const char *use_sol;
       /* name of input mip solution file in GLPK format */
-#endif
 };
 
 static int str2int(const char *s, int *x)
@@ -165,9 +149,6 @@ static int str2int(const char *s, int *x)
       if (!(INT_MIN <= t && t <= INT_MAX))
          return 1;
       *x = t;
-#if 0
-      xprintf("str2int: x = %d\n", *x);
-#endif
       return 0;
 }
 
@@ -181,9 +162,6 @@ static int str2num(const char *s, double *x)
       if (!(-DBL_MAX <= t && t <= +DBL_MAX))
          return 1;
       *x = t;
-#if 0
-      xprintf("str2num: x = %g\n", *x);
-#endif
       return 0;
 }
 

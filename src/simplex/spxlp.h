@@ -94,10 +94,7 @@ typedef struct IndexNode IndexNode;
 struct IndexNode
 {
     int candidateColumns;
-    uint64_t inverseTime;
-    uint64_t inverseTime2;
-    uint64_t reducedCostTime;
-    uint64_t pivotTime;
+    uint64_t iterationTime;
     double baseNorm;
     double inverseBaseNorm;
     double conditionNumber;
@@ -173,7 +170,7 @@ struct SPXLP
 };
 
 #define insert_negative_reduced_cost_index _glp_insert_negative_reduced_cost_index
-void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, uint64_t pivotTime, double absMaxReducedCost);
+void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, double absMaxReducedCost);
 
 #define spx_factorize _glp_spx_factorize
 int spx_factorize(SPXLP *lp);

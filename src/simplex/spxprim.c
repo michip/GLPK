@@ -19,9 +19,7 @@
 *  along with GLPK. If not, see <http://www.gnu.org/licenses/>.
 ***********************************************************************/
 
-#if 1 /* 18/VII-2017 */
 #define SCALE_Z 1
-#endif
 
 #include "env.h"
 #include "simplex.h"
@@ -720,11 +718,7 @@ static void play_bounds(struct csa *csa, int all) {
     double *orig_l = csa->orig_l;
     double *orig_u = csa->orig_u;
     double *beta = csa->beta;
-#if 0 /* 11/VI-2017 */
-    const double *tcol = csa->tcol; /* was used to update beta */
-#else
     const double *tcol = csa->tcol.vec;
-#endif
     int i, k;
     xassert(csa->phase == 1 || csa->phase == 2);
     /* primal values beta = (beta[i]) should be valid */
@@ -752,11 +746,7 @@ static void play_bounds(struct csa *csa, int all) {
                 xassert(c[k] == 0.0);
             if (l[k] != -DBL_MAX) {  /* xB[i] has lower bound */
                 if (beta[i] < l[k]) {  /* strong feasibility means xB[i] >= lB[i] */
-#if 0 /* 11/VI-2017 */
-                    l[k] = beta[i];
-#else
                     l[k] = beta[i] - 1e-9;
-#endif
                 } else if (l[k] < orig_l[k]) {  /* remove/reduce perturbation of lB[i] */
                     if (beta[i] >= orig_l[k])
                         l[k] = orig_l[k];
@@ -766,11 +756,7 @@ static void play_bounds(struct csa *csa, int all) {
             }
             if (u[k] != +DBL_MAX) {  /* xB[i] has upper bound */
                 if (beta[i] > u[k]) {  /* strong feasibility means xB[i] <= uB[i] */
-#if 0 /* 11/VI-2017 */
-                    u[k] = beta[i];
-#else
                     u[k] = beta[i] + 1e-9;
-#endif
                 } else if (u[k] > orig_u[k]) {  /* remove/reduce perturbation of uB[i] */
                     if (beta[i] <= orig_u[k])
                         u[k] = orig_u[k];
@@ -780,7 +766,6 @@ static void play_bounds(struct csa *csa, int all) {
             }
         }
     }
-    return;
 }
 
 static void remove_perturb(struct csa *csa) {     /* remove perturbation */
@@ -807,12 +792,9 @@ static void remove_perturb(struct csa *csa) {     /* remove perturbation */
     }
     /* removing perturbation changes primal solution components */
     csa->phase = csa->beta_st = 0;
-#if 1
     if (csa->msg_lev >= GLP_MSG_ALL)
         xprintf("Removing LP perturbation [%d]...\n",
                 csa->it_cnt);
-#endif
-    return;
 }
 
 /***********************************************************************
@@ -859,29 +841,17 @@ static double sum_infeas(SPXLP *lp, const double beta[/*1+m*/]) {
 static void display(struct csa *csa, int spec) {
     int nnn, k;
     double obj, sum, *save, *save1;
-#if 1 /* 15/VII-2017 */
     double tm_cur;
-#endif
     /* check if the display output should be skipped */
     if (csa->msg_lev < GLP_MSG_ON) goto skip;
-#if 1 /* 15/VII-2017 */
     tm_cur = xtime();
-#endif
     if (csa->out_dly > 0 &&
-        #if 0 /* 15/VII-2017 */
-        1000.0 * xdifftime(xtime(), csa->tm_beg) < csa->out_dly)
-        #else
         1000.0 * xdifftime(tm_cur, csa->tm_beg) < csa->out_dly)
-#endif
         goto skip;
     if (csa->it_cnt == csa->it_dpy) goto skip;
-#if 0 /* 15/VII-2017 */
-    if (!spec && csa->it_cnt % csa->out_frq != 0) goto skip;
-#else
     if (!spec &&
         1000.0 * xdifftime(tm_cur, csa->tm_dpy) < csa->out_frq)
         goto skip;
-#endif
     /* compute original objective value */
     save = csa->lp->c;
     csa->lp->c = csa->orig_c;
@@ -891,17 +861,13 @@ static void display(struct csa *csa, int spec) {
     obj *= csa->fz;
 #endif
     /* compute sum of (scaled) primal infeasibilities */
-#if 1 /* 01/VII-2017 */
     save = csa->lp->l;
     save1 = csa->lp->u;
     csa->lp->l = csa->orig_l;
     csa->lp->u = csa->orig_u;
-#endif
     sum = sum_infeas(csa->lp, csa->beta);
-#if 1 /* 01/VII-2017 */
     csa->lp->l = save;
     csa->lp->u = save1;
-#endif
     /* compute number of infeasibilities/non-optimalities */
     switch (csa->phase) {
         case 1:
@@ -924,19 +890,15 @@ static void display(struct csa *csa, int spec) {
         xprintf(" %d", csa->inv_cnt);
         csa->inv_cnt = 0;
     }
-#if 1 /* 23/VI-2017 */
     if (csa->phase == 1 && csa->r_test == GLP_RT_FLIP) {  /*xprintf("   %d,%d", csa->ns_cnt, csa->ls_cnt);*/
         if (csa->ns_cnt + csa->ls_cnt)
             xprintf(" %d%%",
                     (100 * csa->ls_cnt) / (csa->ns_cnt + csa->ls_cnt));
         csa->ns_cnt = csa->ls_cnt = 0;
     }
-#endif
     xprintf("\n");
     csa->it_dpy = csa->it_cnt;
-#if 1 /* 15/VII-2017 */
     csa->tm_dpy = tm_cur;
-#endif
     skip:
     return;
 }
@@ -984,9 +946,9 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
      *  0 = perturbation is not used and disabled
      * +1 = perturbation is being used */
     int j, refct, ret;
-    uint64_t startInverse1, endInverse1, startInverse2, endInverse2, startReducedCost, endReducedCost, startPivot, endPivot;
+    uint64_t startIterationTime, endIterationTime;
     loop: /* main loop starts here */
-    startInverse1 = micros();
+    startIterationTime = micros();
 
     /* compute factorization of the basis matrix */
     if (!lp->valid) {
@@ -995,8 +957,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         csa->inv_cnt++;
         if (ret != 0) {
             if (msg_lev >= GLP_MSG_ERR)
-                xprintf("Error: unable to factorize the basis matrix (%d"
-                        ")\n", ret);
+                xprintf("Error: unable to factorize the basis matrix (%d)\n", ret);
             csa->p_stat = csa->d_stat = GLP_UNDEF;
             ret = GLP_EFAIL;
             goto fini;
@@ -1005,16 +966,14 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         cond = bfd_condest(lp->bfd);
         if (cond > 1.0 / DBL_EPSILON) {
             if (msg_lev >= GLP_MSG_ERR)
-                xprintf("Error: basis matrix is singular to working prec"
-                        "ision (cond = %.3g)\n", cond);
+                xprintf("Error: basis matrix is singular to working precision (cond = %.3g)\n", cond);
             csa->p_stat = csa->d_stat = GLP_UNDEF;
             ret = GLP_EFAIL;
             goto fini;
         }
         if (cond > 0.001 / DBL_EPSILON) {
             if (msg_lev >= GLP_MSG_ERR)
-                xprintf("Warning: basis matrix is ill-conditioned (cond "
-                        "= %.3g)\n", cond);
+                xprintf("Warning: basis matrix is ill-conditioned (cond= %.3g)\n", cond);
         }
         /* invalidate basic solution components */
         csa->beta_st = csa->d_st = 0;
@@ -1044,15 +1003,14 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
                            tol_bnd1)) {  /* excessive bound violations due to round-off errors */
                 if (perturb < 0) {
                     if (msg_lev >= GLP_MSG_ALL)
-                        xprintf("Perturbing LP to avoid instability [%d].."
-                                ".\n", csa->it_cnt);
+                        xprintf("Perturbing LP to avoid instability [%d]...\n", csa->it_cnt);
                     perturb = 1;
                     goto loop;
                 }
 
                 if (msg_lev >= GLP_MSG_ERR)
-                    xprintf("Warning: numerical instability (primal simpl"
-                            "ex, phase %s)\n", csa->phase == 1 ? "I" : "II");
+                    xprintf("Warning: numerical instability (primal simplex, phase %s)\n",
+                            csa->phase == 1 ? "I" : "II");
                 /* restart the search */
                 lp->valid = 0;
                 csa->phase = 0;
@@ -1075,9 +1033,6 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     /* at this point the search phase is determined */
     xassert(csa->phase == 1 || csa->phase == 2);
 
-    endInverse1 = micros();
-
-    startReducedCost = micros();
     /* compute reduced costs of non-basic variables d = (d[j]) */
     if (!csa->d_st) {
         spx_eval_pi(lp, pi);
@@ -1092,7 +1047,6 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
      * components are valid */
     xassert(lp->valid && csa->beta_st && csa->d_st);
 
-    endReducedCost = micros();
 #if CHECK_ACCURACY
     /* check accuracy of current basic solution components (only for
      * debugging) */
@@ -1141,7 +1095,6 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     /* display the search progress */
     display(csa, 0);
 
-    startPivot = micros();
     /* select eligible non-basic variables */
     switch (csa->phase) {
         case 1:
@@ -1170,7 +1123,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
             maxReducedCost = -DBL_MAX;
         }
 
-        insert_negative_reduced_cost_index(lp, csa->num, 0, maxReducedCost);
+        insert_negative_reduced_cost_index(lp, csa->num, maxReducedCost);
     }
 
     /* check for optimality */
@@ -1321,9 +1274,6 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         ret = GLP_EFAIL;
         goto fini;
     }
-
-    endPivot = micros();
-    startInverse2 = micros();
     /* update reduced costs of non-basic variables for adjacent
      * basis */
 
@@ -1381,14 +1331,11 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         play_bounds(csa, 0);
     }
 
-    endInverse2 = micros();
+    endIterationTime = micros();
 
     /* simplex iteration complete */
     csa->it_cnt++;
-    lp->iteration_info->pivotTime = endPivot - startPivot;
-    lp->iteration_info->reducedCostTime = endReducedCost - startReducedCost;
-    lp->iteration_info->inverseTime = endInverse1 - startInverse1;
-    lp->iteration_info->inverseTime2 = endInverse2 - startInverse2;
+    lp->iteration_info->iterationTime = endIterationTime - startIterationTime;
 
     goto loop;
     fini: /* restore original objective function */
@@ -1404,10 +1351,6 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         csa->d_stat = (csa->num == 0 ? GLP_FEAS : GLP_INFEAS);
     }
     return ret;
-}
-
-void exportBenchmark() {
-
 }
 
 int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal simplex method */
@@ -1636,9 +1579,16 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
         fprintf(f, "%d # max nonzeros in A_j\n", max_nonzeros_in_column);
         fprintf(f, "%d # solved optimally", ret == 0 && glp_get_status(P) == GLP_OPT);
 
+        IndexNode *current = csa->lp->iteration_info;
+        fprintf(f, "\niterationTime: ");
+        current = csa->lp->iteration_info;
+        while (current != NULL) {
+            fprintf(f, "%lld ", current->iterationTime);
+            current = current->next;
+        }
 
         fprintf(f, "\ncandidateColumns: ");
-        IndexNode *current = csa->lp->iteration_info;
+        current = csa->lp->iteration_info;
         while (current != NULL) {
             fprintf(f, "%d ", current->candidateColumns);
             current = current->next;
@@ -1669,34 +1619,6 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
         current = csa->lp->iteration_info;
         while (current != NULL) {
             fprintf(f, "%lf ", current->conditionNumber);
-            current = current->next;
-        }
-
-        fprintf(f, "\ninverseTime: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%lld ", current->inverseTime);
-            current = current->next;
-        }
-
-        fprintf(f, "\ninverseTime2: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%lld ", current->inverseTime2);
-            current = current->next;
-        }
-
-        fprintf(f, "\nreducedCostTime: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%lld ", current->reducedCostTime);
-            current = current->next;
-        }
-
-        fprintf(f, "\npivotTime: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%lld ", current->pivotTime);
             current = current->next;
         }
 
