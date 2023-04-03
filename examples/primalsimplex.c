@@ -5,32 +5,9 @@
 
 #include <glpk.h>
 
-void setParameters() {
-    /*(p("--steep"))
-        csa->smcp.pricing = GLP_PT_PSE;
-    else if (p("--nosteep"))
-        csa->smcp.pricing = GLP_PT_STD;
-    else if (p("--relax"))
-        csa->smcp.r_test = GLP_RT_HAR;
-    else if (p("--norelax"))
-        csa->smcp.r_test = GLP_RT_STD;
-
-    else if (p("--flip"))
-        csa->smcp.r_test = GLP_RT_FLIP;
-        csa->iocp.flip = GLP_ON;
-    }
-    else if (p("--presol"))
-        csa->smcp.presolve = GLP_ON;
-    else if (p("--nopresol"))
-        csa->smcp.presolve = GLP_OFF;
-    else if (p("--exact"))
-        csa->exact = 1;
-    */
-}
-
-int runPrimalSimplex(const char *file_path, int tm_lim) {
-    xprintf("%s file ", file_path);
-    xprintf("%d time", tm_lim);
+int runPrimalSimplex(const char *file_path, int tm_lim, int pivot_rule, int ratio_test) {
+    xprintf("Solving %s \n", file_path);
+    xprintf("Time limit: %d \n", tm_lim);
     struct csa _csa, *csa = &_csa;
     int ret;
 
@@ -91,7 +68,24 @@ int runPrimalSimplex(const char *file_path, int tm_lim) {
         csa->smcp.tm_lim = csa->iocp.tm_lim = INT_MAX;
 
     csa->smcp.meth = GLP_PRIMAL;
-    setParameters();
+
+    if (pivot_rule == 1) {
+        csa->smcp.pricing = GLP_PT_PSE; // Steepest Edge
+        xprintf("Using steepest edge pivot.\n");
+    } else if(pivot_rule == 2) {
+        csa->smcp.pricing = GLP_PT_STD; // Danzig
+        xprintf("Using Danzig pivot.\n");
+    } else xassert(csa != csa);
+
+    if (ratio_test == 1) {
+        csa->smcp.r_test = GLP_RT_HAR; // Harris' two-pass ratio test
+        xprintf("Using Harris two-pass ratio test.\n");
+    } else if(ratio_test == 2) {
+        csa->smcp.r_test = GLP_RT_STD;; // Standard ratio test
+        xprintf("Using standard ratio test.\n");
+    } else xassert(csa != csa);
+
+    /* end set parameters */
 
     /*--------------------------------------------------------------*/
     /* remove all output files specified in the command line */

@@ -947,9 +947,10 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
      * +1 = perturbation is being used */
     int j, refct, ret;
     uint64_t startIterationTime, endIterationTime;
-    loop: /* main loop starts here */
+
     startIterationTime = micros();
 
+    loop: /* main loop starts here */
     /* compute factorization of the basis matrix */
     if (!lp->valid) {
         double cond;
@@ -1108,22 +1109,8 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     }
 
     {
-        // Log iteration
-        double maxReducedCost = 0;
-        int foundMaxReducedCost = 0;
-        for (int col = 1; col <= csa->num; col++) {
-            double reducedCost = d[list[col]];
-            if (fabs(reducedCost) > fabs(maxReducedCost)) {
-                maxReducedCost = reducedCost;
-                foundMaxReducedCost = 1;
-            }
-        }
-
-        if (foundMaxReducedCost == 0) {
-            maxReducedCost = -DBL_MAX;
-        }
-
-        insert_negative_reduced_cost_index(lp, csa->num, maxReducedCost);
+        // Save iteration data if necessary
+        update_iteration_data(lp, csa->num, d, list);
     }
 
     /* check for optimality */
@@ -1331,14 +1318,27 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         play_bounds(csa, 0);
     }
 
-    endIterationTime = micros();
-
     /* simplex iteration complete */
     csa->it_cnt++;
-    //lp->iteration_info->iterationTime = endIterationTime - startIterationTime;
 
+    // Log iteration
+    notify_new_iteration();
+    notify_iteration_data();
+    endIterationTime = micros();
+    notify_iteration_time(endIterationTime - startIterationTime);
+    startIterationTime = micros();
     goto loop;
     fini: /* restore original objective function */
+    endIterationTime = micros();
+
+    if(ret == 0) {
+        notify_new_iteration();
+        notify_iteration_data();
+        notify_iteration_time(endIterationTime - startIterationTime);
+        xprintf("Logged final iteration because of optimality");
+    }
+
+
     memcpy(c, csa->orig_c, (1 + n) * sizeof(double));
     /* compute reduced costs of non-basic variables and determine
      * solution dual status, if necessary */
@@ -1533,120 +1533,6 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
         xassert(P->some != 0);
     }
     skip: /* deallocate working objects and arrays */
-
-#if 0
-    {
-        /* return to calling program */
-        char filename[256];
-        snprintf(filename, sizeof(filename), "%s", "benchmark.out");
-        FILE *f = fopen(filename, "w");
-        fprintf(f, "%d # n\n", csa->lp->n);
-        fprintf(f, "%d # m\n", csa->lp->m);
-        fprintf(f, "%d # nonzeros\n", csa->lp->nnz);
-
-        double max_c = -DBL_MAX;
-        int max_nonzeros_in_column = 0;
-        double max_two_norm_in_column_or_b = 0;
-
-        for (int x = 1; x <= csa->lp->m; x++) {
-            max_two_norm_in_column_or_b += csa->lp->b[x] * csa->lp->b[x];
-        }
-
-        max_two_norm_in_column_or_b = sqrt(max_two_norm_in_column_or_b);
-
-        for (int x = 1; x <= csa->lp->n; x++) {
-            if (csa->lp->c[x] > max_c) {
-                max_c = csa->lp->c[x];
-            }
-
-            // update number of nonzeros
-            int nonzeros_in_col = csa->lp->A_ptr[x + 1] - csa->lp->A_ptr[x];
-            if (nonzeros_in_col > max_nonzeros_in_column) max_nonzeros_in_column = nonzeros_in_col;
-
-            // calculate 2-norm of each column
-            double two_norm = 0;
-            // TODO: Find out what is going on here
-            //xprintf("%d - %d (%d)\n", csa->lp->A_ptr[x], csa->lp->A_ptr[x + 1], csa->lp->nnz);
-            for (int y = csa->lp->A_ptr[x]; y < csa->lp->A_ptr[x + 1]; y++) {
-                two_norm += csa->lp->A_val[y] * csa->lp->A_val[y];
-            }
-
-            two_norm = sqrt(two_norm);
-            if (max_two_norm_in_column_or_b < two_norm) max_two_norm_in_column_or_b = two_norm;
-        }
-
-        fprintf(f, "%lf # max two norm in column or b / eta\n", max_two_norm_in_column_or_b);
-        fprintf(f, "%lf # max c\n", max_c);
-        fprintf(f, "%d # max nonzeros in A_j\n", max_nonzeros_in_column);
-        fprintf(f, "%d # solved optimally", ret == 0 && glp_get_status(P) == GLP_OPT);
-
-        IndexNode *current = csa->lp->iteration_info;
-        fprintf(f, "\niterationTime: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%lld ", current->iterationTime);
-            current = current->next;
-        }
-
-        fprintf(f, "\ncandidateColumns: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%d ", current->candidateColumns);
-            current = current->next;
-        }
-
-        fprintf(f, "\nnonZerosInBasisColumn: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%d ", current->maxNonzerosInBasisColumn);
-            current = current->next;
-        }
-
-        fprintf(f, "\nbasis-1-norm: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%lf ", current->baseNorm);
-            current = current->next;
-        }
-
-        fprintf(f, "\nbasis-inverse-1-norm: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%lf ", current->inverseBaseNorm);
-            current = current->next;
-        }
-
-        fprintf(f, "\nconditionNumber: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%lf ", current->conditionNumber);
-            current = current->next;
-        }
-
-        fprintf(f, "\nabsMaxReducedCost: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            if (current->absMaxReducedCost > -DBL_MAX) {
-                fprintf(f, "%lf ", current->absMaxReducedCost);
-            } else {
-                fprintf(f, "NULL ");
-            }
-            current = current->next;
-        }
-
-        fprintf(f, "\nnonZerosInBasis: ");
-        current = csa->lp->iteration_info;
-        while (current != NULL) {
-            fprintf(f, "%d ", current->nonzerosInBasis);
-            current = current->next;
-        }
-
-        fclose(f);
-
-        xprintf("Wrote benchmark.out file\n");
-    }
-#endif
-
     spx_free_lp(csa->lp);
     tfree(map);
     tfree(csa->orig_c);

@@ -27,8 +27,10 @@
 typedef struct ENV ENV;
 typedef struct MBD MBD;
 
+#ifndef SIZE_T_MAX
 #define SIZE_T_MAX (~(size_t)0)
 /* largest value of size_t type */
+#endif
 
 #define TBUF_SIZE 4096
 /* terminal output buffer size, in bytes */

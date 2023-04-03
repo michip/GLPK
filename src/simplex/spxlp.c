@@ -764,7 +764,28 @@ int spx_update_invb(SPXLP *lp, int i, int k) {
     return ret;
 }
 
-void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, double absMaxReducedCost) {
+void notify_new_iteration() {
+    if (!newIterationCallback) {
+        return;
+    }
+
+    newIterationCallback();
+}
+
+void notify_iteration_time(unsigned int iterationTime) {
+    if (!iterationTimeCallback) {
+        return;
+    }
+
+    iterationTimeCallback(iterationTime);
+}
+
+
+void update_iteration_data(
+        struct SPXLP *lp,
+        int candidateColumns,
+        const double *reducedCosts,
+        const int *reducedCostsIndices) {
     if (!iterationCallback) {
         return;
     }
@@ -792,23 +813,35 @@ void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, 
         }
     }
 
-    iterationCallback(lp->m, basis, inverse, candidateColumns, absMaxReducedCost);
-    /*
-    new_node->iterationTime = 0;
+    // Extract reduced costs.
+    double maxReducedCost = 0;
+    for (int col = 1; col <= candidateColumns; col++) {
+        double reducedCost = reducedCosts[reducedCostsIndices[col]];
+        if (fabs(reducedCost) > fabs(maxReducedCost)) {
+            maxReducedCost = reducedCost;
+        }
+    }
 
-    new_node->maxNonzerosInBasisColumn = maxNonZeros;
-    new_node->nonzerosInBasis = totalNonZeros;
-    new_node->baseNorm = bfd_b_norm(lp->bfd);
-    new_node->inverseBaseNorm = bfd_i_norm(lp->bfd);
-    new_node->conditionNumber = bfd_condest(lp->bfd);
-    new_node->candidateColumns = candidateColumns;
-    new_node->absMaxReducedCost = absMaxReducedCost;
-
-    new_node->next = lp->iteration_info;
-    lp->iteration_info = new_node;*/
+    currentIterationData.m = lp->m;
+    currentIterationData.basis = basis;
+    currentIterationData.inverse = inverse;
+    currentIterationData.candidateColumns = candidateColumns;
+    currentIterationData.maxReducedCost = maxReducedCost;
 
     xfree(ind);
     xfree(val);
 }
+
+
+void notify_iteration_data() {
+    if (!iterationCallback) {
+        return;
+    }
+
+    iterationCallback(currentIterationData.m, currentIterationData.basis,
+                      currentIterationData.inverse, currentIterationData.candidateColumns,
+                      currentIterationData.maxReducedCost);
+}
+
 
 /* eof */

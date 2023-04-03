@@ -8,12 +8,18 @@
 #else
 #define API
 #endif
+typedef void (*NEW_ITERATION_CALLBACK)();
 // m, A_B, A_B^-1, #candidateColumns, absMaxReducedCost
-typedef void (*CALLBACK)(int, double **, double **, int, double);
+typedef void (*ITERATION_DATA_CALLBACK)(int, double **, double **, int, double);
+typedef void (*ITERATION_TIME_CALLBACK)(unsigned int);
 
-extern CALLBACK iterationCallback;
+extern NEW_ITERATION_CALLBACK newIterationCallback;
+extern ITERATION_DATA_CALLBACK iterationCallback;
+extern ITERATION_TIME_CALLBACK iterationTimeCallback;
 
-API void setIterationCallback(CALLBACK cb);
+API void setNewIterationCallback(NEW_ITERATION_CALLBACK cb);
+API void setIterationCallback(ITERATION_DATA_CALLBACK cb);
+API void setIterationTimeCallback(ITERATION_TIME_CALLBACK cb);
 
 double **createBasisMatrixShare(SPXLP *lp);
 

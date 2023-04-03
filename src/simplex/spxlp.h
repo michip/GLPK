@@ -89,161 +89,181 @@
 *  of matrix A that correspond to non-basic variables xN. */
 
 typedef struct SPXLP SPXLP;
-typedef struct IndexNode IndexNode;
 
-struct IndexNode
-{
+static struct {
+    int m;
+    double **basis;
+    double **inverse;
+    double maxReducedCost;
     int candidateColumns;
-    uint64_t iterationTime;
-    double baseNorm;
-    double inverseBaseNorm;
-    double conditionNumber;
-    double absMaxReducedCost;
-    int maxNonzerosInBasisColumn;
-    int nonzerosInBasis;
-    struct IndexNode *next;
+
+} currentIterationData;
+
+struct SPXLP {     /* LP problem data and its (current) basis */
+    int m;
+    /* number of equality constraints, m > 0 */
+    int n;
+    /* number of variables, n >= m */
+    int nnz;
+    /* number of non-zeros in constraint matrix A */
+    /*--------------------------------------------------------------*/
+    /* mxn-matrix A of constraint coefficients in sparse column-wise
+     * format */
+    int *A_ptr; /* int A_ptr[1+n+1]; */
+    /* A_ptr[0] is not used;
+     * A_ptr[k], 1 <= k <= n, is starting position of k-th column in
+     * arrays A_ind and A_val; note that A_ptr[1] is always 1;
+     * A_ptr[n+1] indicates the position after the last element in
+     * arrays A_ind and A_val, i.e. A_ptr[n+1] = nnz+1, where nnz is
+     * the number of non-zero elements in matrix A;
+     * the length of k-th column (the number of non-zero elements in
+     * that column) can be calculated as A_ptr[k+1] - A_ptr[k] */
+    int *A_ind; /* int A_ind[1+nnz]; */
+    /* row indices */
+    double *A_val; /* double A_val[1+nnz]; */
+    /* non-zero element values (constraint coefficients) */
+    /*--------------------------------------------------------------*/
+    /* principal vectors of LP formulation */
+    double *b; /* double b[1+m]; */
+    /* b[0] is not used;
+     * b[i], 1 <= i <= m, is the right-hand side of i-th equality
+     * constraint */
+    double *c; /* double c[1+n]; */
+    /* c[0] is the constant term of the objective function;
+     * c[k], 1 <= k <= n, is the objective function coefficient at
+     * variable x[k] */
+    double *l; /* double l[1+n]; */
+    /* l[0] is not used;
+     * l[k], 1 <= k <= n, is the lower bound of variable x[k];
+     * if x[k] has no lower bound, l[k] = -DBL_MAX */
+    double *u; /* double u[1+n]; */
+    /* u[0] is not used;
+     * u[k], 1 <= k <= n, is the upper bound of variable u[k];
+     * if x[k] has no upper bound, u[k] = +DBL_MAX;
+     * note that l[k] = u[k] means that x[k] is fixed variable */
+    /*--------------------------------------------------------------*/
+    /* LP basis */
+    int *head; /* int head[1+n]; */
+    /* basis header, which is permutation matrix P (4):
+     * head[0] is not used;
+     * head[i] = k means that xB[i] = x[k], 1 <= i <= m;
+     * head[m+j] = k, means that xN[j] = x[k], 1 <= j <= n-m */
+    char *flag; /* char flag[1+n-m]; */
+    /* flags of non-basic variables:
+     * flag[0] is not used;
+     * flag[j], 1 <= j <= n-m, indicates that non-basic variable
+     * xN[j] is non-fixed and has its upper bound active */
+    /*--------------------------------------------------------------*/
+    /* basis matrix B of order m stored in factorized form */
+    int valid;
+    /* factorization validity flag */
+    BFD *bfd;
+    /* driver to factorization of the basis matrix */
 };
 
-struct SPXLP
-{     /* LP problem data and its (current) basis */
-      int m;
-      /* number of equality constraints, m > 0 */
-      int n;
-      /* number of variables, n >= m */
-      int nnz;
-      /* number of non-zeros in constraint matrix A */
-      /*--------------------------------------------------------------*/
-      /* mxn-matrix A of constraint coefficients in sparse column-wise
-       * format */
-      int *A_ptr; /* int A_ptr[1+n+1]; */
-      /* A_ptr[0] is not used;
-       * A_ptr[k], 1 <= k <= n, is starting position of k-th column in
-       * arrays A_ind and A_val; note that A_ptr[1] is always 1;
-       * A_ptr[n+1] indicates the position after the last element in
-       * arrays A_ind and A_val, i.e. A_ptr[n+1] = nnz+1, where nnz is
-       * the number of non-zero elements in matrix A;
-       * the length of k-th column (the number of non-zero elements in
-       * that column) can be calculated as A_ptr[k+1] - A_ptr[k] */
-      int *A_ind; /* int A_ind[1+nnz]; */
-      /* row indices */
-      double *A_val; /* double A_val[1+nnz]; */
-      /* non-zero element values (constraint coefficients) */
-      /*--------------------------------------------------------------*/
-      /* principal vectors of LP formulation */
-      double *b; /* double b[1+m]; */
-      /* b[0] is not used;
-       * b[i], 1 <= i <= m, is the right-hand side of i-th equality
-       * constraint */
-      double *c; /* double c[1+n]; */
-      /* c[0] is the constant term of the objective function;
-       * c[k], 1 <= k <= n, is the objective function coefficient at
-       * variable x[k] */
-      double *l; /* double l[1+n]; */
-      /* l[0] is not used;
-       * l[k], 1 <= k <= n, is the lower bound of variable x[k];
-       * if x[k] has no lower bound, l[k] = -DBL_MAX */
-      double *u; /* double u[1+n]; */
-      /* u[0] is not used;
-       * u[k], 1 <= k <= n, is the upper bound of variable u[k];
-       * if x[k] has no upper bound, u[k] = +DBL_MAX;
-       * note that l[k] = u[k] means that x[k] is fixed variable */
-      /*--------------------------------------------------------------*/
-      /* LP basis */
-      int *head; /* int head[1+n]; */
-      /* basis header, which is permutation matrix P (4):
-       * head[0] is not used;
-       * head[i] = k means that xB[i] = x[k], 1 <= i <= m;
-       * head[m+j] = k, means that xN[j] = x[k], 1 <= j <= n-m */
-      char *flag; /* char flag[1+n-m]; */
-      /* flags of non-basic variables:
-       * flag[0] is not used;
-       * flag[j], 1 <= j <= n-m, indicates that non-basic variable
-       * xN[j] is non-fixed and has its upper bound active */
-      /*--------------------------------------------------------------*/
-      /* basis matrix B of order m stored in factorized form */
-      int valid;
-      /* factorization validity flag */
-      BFD *bfd;
-      /* driver to factorization of the basis matrix */
+#define notify_iteration_data _glp_notify_iteration_data
+void notify_iteration_data();
 
-      struct IndexNode *iteration_info;
-};
+#define update_iteration_data _glp_update_iteration_data
+void update_iteration_data(struct SPXLP *lp,
+                           int candidateColumns,
+                           const double *reducedCosts,
+                           const int *reducedCostsIndices);
 
-#define insert_negative_reduced_cost_index _glp_insert_negative_reduced_cost_index
-void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, double absMaxReducedCost);
+#define notify_new_iteration _glp_notify_new_iteration
+void notify_new_iteration();
+
+#define notify_iteration_time _glp_notify_iteration_time
+void notify_iteration_time(unsigned int iterationTime);
 
 #define spx_factorize _glp_spx_factorize
+
 int spx_factorize(SPXLP *lp);
 /* compute factorization of current basis matrix */
 
 #define spx_eval_beta _glp_spx_eval_beta
+
 void spx_eval_beta(SPXLP *lp, double beta[/*1+m*/]);
 /* compute values of basic variables */
 
 #define spx_eval_obj _glp_spx_eval_obj
+
 double spx_eval_obj(SPXLP *lp, const double beta[/*1+m*/]);
 /* compute value of objective function */
 
 #define spx_eval_pi _glp_spx_eval_pi
+
 void spx_eval_pi(SPXLP *lp, double pi[/*1+m*/]);
 /* compute simplex multipliers */
 
 #define spx_eval_dj _glp_spx_eval_dj
+
 double spx_eval_dj(SPXLP *lp, const double pi[/*1+m*/], int j);
 /* compute reduced cost of j-th non-basic variable */
 
 #define spx_eval_tcol _glp_spx_eval_tcol
+
 void spx_eval_tcol(SPXLP *lp, int j, double tcol[/*1+m*/]);
 /* compute j-th column of simplex table */
 
 #define spx_eval_rho _glp_spx_eval_rho
+
 void spx_eval_rho(SPXLP *lp, int i, double rho[/*1+m*/]);
 /* compute i-th row of basis matrix inverse */
 
 #if 1 /* 31/III-2016 */
 #define spx_eval_rho_s _glp_spx_eval_rho_s
+
 void spx_eval_rho_s(SPXLP *lp, int i, FVS *rho);
 /* sparse version of spx_eval_rho */
 #endif
 
 #define spx_eval_tij _glp_spx_eval_tij
+
 double spx_eval_tij(SPXLP *lp, const double rho[/*1+m*/], int j);
 /* compute element T[i,j] of simplex table */
 
 #define spx_eval_trow _glp_spx_eval_trow
+
 void spx_eval_trow(SPXLP *lp, const double rho[/*1+m*/], double
-      trow[/*1+n-m*/]);
+trow[/*1+n-m*/]);
 /* compute i-th row of simplex table */
 
 #define spx_update_beta _glp_spx_update_beta
+
 void spx_update_beta(SPXLP *lp, double beta[/*1+m*/], int p,
-      int p_flag, int q, const double tcol[/*1+m*/]);
+                     int p_flag, int q, const double tcol[/*1+m*/]);
 /* update values of basic variables */
 
 #if 1 /* 30/III-2016 */
 #define spx_update_beta_s _glp_spx_update_beta_s
+
 void spx_update_beta_s(SPXLP *lp, double beta[/*1+m*/], int p,
-      int p_flag, int q, const FVS *tcol);
+                       int p_flag, int q, const FVS *tcol);
 /* sparse version of spx_update_beta */
 #endif
 
 #define spx_update_d _glp_spx_update_d
+
 double spx_update_d(SPXLP *lp, double d[/*1+n-m*/], int p, int q,
-      const double trow[/*1+n-m*/], const double tcol[/*1+m*/]);
+                    const double trow[/*1+n-m*/], const double tcol[/*1+m*/]);
 /* update reduced costs of non-basic variables */
 
 #if 1 /* 30/III-2016 */
 #define spx_update_d_s _glp_spx_update_d_s
+
 double spx_update_d_s(SPXLP *lp, double d[/*1+n-m*/], int p, int q,
-      const FVS *trow, const FVS *tcol);
+                      const FVS *trow, const FVS *tcol);
 /* sparse version of spx_update_d */
 #endif
 
 #define spx_change_basis _glp_spx_change_basis
+
 void spx_change_basis(SPXLP *lp, int p, int p_flag, int q);
 /* change current basis to adjacent one */
 
 #define spx_update_invb _glp_spx_update_invb
+
 int spx_update_invb(SPXLP *lp, int i, int k);
 /* update factorization of basis matrix */
 

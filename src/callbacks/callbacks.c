@@ -2,10 +2,20 @@
 #include <printf.h>
 #include "callbacks.h"
 
-CALLBACK iterationCallback;
+NEW_ITERATION_CALLBACK newIterationCallback;
+ITERATION_DATA_CALLBACK iterationCallback;
+ITERATION_TIME_CALLBACK iterationTimeCallback;
 
-API void setIterationCallback(CALLBACK cb) {
+API void setNewIterationCallback(NEW_ITERATION_CALLBACK cb) {
+    newIterationCallback = cb;
+}
+
+API void setIterationCallback(ITERATION_DATA_CALLBACK cb) {
     iterationCallback = cb;
+}
+
+API void setIterationTimeCallback(ITERATION_TIME_CALLBACK cb) {
+    iterationTimeCallback = cb;
 }
 
 void writeZeros(SPXLP *lp, double **M) {
