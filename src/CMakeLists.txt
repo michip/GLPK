@@ -13,6 +13,7 @@ add_subdirectory(mpl)
 add_subdirectory(npp)
 add_subdirectory(proxy)
 add_subdirectory(simplex)
+add_subdirectory(callbacks)
 add_subdirectory(zlib)
 
 target_include_directories(GLPK

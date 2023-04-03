@@ -21,16 +21,8 @@
 
 #include "env.h"
 #include "spxlp.h"
-
-/***********************************************************************
-*  spx_factorize - compute factorization of current basis matrix
-*
-*  This routine computes factorization of the current basis matrix B.
-*
-*  If the factorization has been successfully computed, the routine
-*  validates it and returns zero. Otherwise, the routine invalidates
-*  the factorization and returns the code provided by the factorization
-*  driver (bfd_factorize). */
+#include "sgf.h"
+#include "callbacks/callbacks.h"
 
 static int jth_col(void *info, int j, int ind[], double val[]) {     /* provide column B[j] */
     SPXLP *lp = info;
@@ -47,6 +39,16 @@ static int jth_col(void *info, int j, int ind[], double val[]) {     /* provide 
     return len;
 }
 
+
+/***********************************************************************
+*  spx_factorize - compute factorization of current basis matrix
+*
+*  This routine computes factorization of the current basis matrix B.
+*
+*  If the factorization has been successfully computed, the routine
+*  validates it and returns zero. Otherwise, the routine invalidates
+*  the factorization and returns the code provided by the factorization
+*  driver (bfd_factorize). */
 int spx_factorize(SPXLP *lp) {
     int ret;
     ret = bfd_factorize(lp->bfd, lp->m, jth_col, lp);
@@ -309,8 +311,6 @@ void spx_eval_rho(SPXLP *lp, int i, double rho[/*1+m*/]) {
     return;
 }
 
-#if 1 /* 31/III-2016 */
-
 void spx_eval_rho_s(SPXLP *lp, int i, FVS *rho) {     /* sparse version of spx_eval_rho */
     int m = lp->m;
     xassert(1 <= i && i <= m);
@@ -323,8 +323,6 @@ void spx_eval_rho_s(SPXLP *lp, int i, FVS *rho) {     /* sparse version of spx_e
     bfd_btran_s(lp->bfd, rho);
     return;
 }
-
-#endif
 
 /***********************************************************************
 *  spx_eval_tij - compute element T[i,j] of simplex table
@@ -510,7 +508,6 @@ void spx_update_beta(SPXLP *lp, double beta[/*1+m*/], int p,
     return;
 }
 
-#if 1 /* 30/III-2016 */
 
 void spx_update_beta_s(SPXLP *lp, double beta[/*1+m*/], int p,
                        int p_flag, int q, const FVS *tcol) {     /* sparse version of spx_update_beta */
@@ -527,10 +524,6 @@ void spx_update_beta_s(SPXLP *lp, double beta[/*1+m*/], int p,
     double delta_p, delta_q;
     xassert(tcol->n == m);
     if (p < 0) {  /* special case: xN[q] goes to its opposite bound */
-#if 0 /* 11/VI-2017 */
-        /* FIXME: not tested yet */
-        xassert(0);
-#endif
         xassert(1 <= q && q <= n - m);
         /* xN[q] should be double-bounded variable */
         k = head[m + q]; /* x[k] = xN[q] */
@@ -579,8 +572,6 @@ void spx_update_beta_s(SPXLP *lp, double beta[/*1+m*/], int p,
     }
     return;
 }
-
-#endif
 
 /***********************************************************************
 *  spx_update_d - update reduced costs of non-basic variables
@@ -662,8 +653,6 @@ double spx_update_d(SPXLP *lp, double d[/*1+n-m*/], int p, int q,
     return e;
 }
 
-#if 1 /* 30/III-2016 */
-
 double spx_update_d_s(SPXLP *lp, double d[/*1+n-m*/], int p, int q,
                       const FVS *trow, const FVS *tcol) {     /* sparse version of spx_update_d */
     int m = lp->m;
@@ -702,8 +691,6 @@ double spx_update_d_s(SPXLP *lp, double d[/*1+n-m*/], int p, int q,
     }
     return e;
 }
-
-#endif
 
 /***********************************************************************
 *  spx_change_basis - change current basis to adjacent one
@@ -777,26 +764,36 @@ int spx_update_invb(SPXLP *lp, int i, int k) {
     return ret;
 }
 
-
 void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, double absMaxReducedCost) {
-    struct IndexNode *new_node = (struct IndexNode *) malloc(sizeof(struct IndexNode));
+    if (!iterationCallback) {
+        return;
+    }
+
+    double **basis = createBasisMatrixShare(lp);
+    double **inverse = createInverseMatrixShare(lp);
 
     // Determine zeros in columns
     int *ind = talloc(1 + lp->m, int);
     double *val = talloc(1 + lp->m, double);
-    int maxNonZeros = 0;
-    int totalNonZeros = 0;
+
     for (int j = 1; j <= lp->m; j++) {
         int colNonZeros = jth_col(lp, j, ind, val);
-        totalNonZeros += colNonZeros;
-        if (colNonZeros > maxNonZeros) {
-            maxNonZeros = colNonZeros;
+        // Make a full copy of the row in the val variable
+        for (int i = 1; i <= colNonZeros; i++) {
+            basis[ind[i]-1][j-1] = val[i]; // Shifting the variables to zero based indexing
         }
     }
 
-    xfree(ind);
-    xfree(val);
+    for (int j = 1; j <= lp->m; j++) {
+        spx_eval_rho(lp, j, val);
 
+        for (int i = 1; i <= lp->m; i++) {
+            inverse[j-1][i-1] = val[i]; // Shifting the variables to zero based indexing
+        }
+    }
+
+    iterationCallback(lp->m, basis, inverse, candidateColumns, absMaxReducedCost);
+    /*
     new_node->iterationTime = 0;
 
     new_node->maxNonzerosInBasisColumn = maxNonZeros;
@@ -808,7 +805,10 @@ void insert_negative_reduced_cost_index(struct SPXLP *lp, int candidateColumns, 
     new_node->absMaxReducedCost = absMaxReducedCost;
 
     new_node->next = lp->iteration_info;
-    lp->iteration_info = new_node;
+    lp->iteration_info = new_node;*/
+
+    xfree(ind);
+    xfree(val);
 }
 
 /* eof */

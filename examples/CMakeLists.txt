@@ -12,5 +12,12 @@ target_link_libraries(glpsol PRIVATE
   $<$<NOT:$<C_COMPILER_ID:MSVC>>:m>)
 add_executable(${PROJECT_NAMESPACE}::glpsol ALIAS glpsol)
 
-install(TARGETS glpsol
-  EXPORT ${PROJECT_NAME}Targets)
+install(TARGETS glpsol EXPORT ${PROJECT_NAME}Targets)
+
+add_library(primalsimplex primalsimplex.c)
+target_compile_features(primalsimplex PRIVATE c_std_11)
+target_link_libraries(primalsimplex PRIVATE
+        ${PROJECT_NAMESPACE}::GLPK
+        $<$<NOT:$<C_COMPILER_ID:MSVC>>:m>)
+
+

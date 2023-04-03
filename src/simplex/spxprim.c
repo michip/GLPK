@@ -1335,7 +1335,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
 
     /* simplex iteration complete */
     csa->it_cnt++;
-    lp->iteration_info->iterationTime = endIterationTime - startIterationTime;
+    //lp->iteration_info->iterationTime = endIterationTime - startIterationTime;
 
     goto loop;
     fini: /* restore original objective function */
@@ -1534,6 +1534,7 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
     }
     skip: /* deallocate working objects and arrays */
 
+#if 0
     {
         /* return to calling program */
         char filename[256];
@@ -1644,6 +1645,7 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
 
         xprintf("Wrote benchmark.out file\n");
     }
+#endif
 
     spx_free_lp(csa->lp);
     tfree(map);
