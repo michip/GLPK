@@ -226,6 +226,7 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int dir, int pivot_rule,
     if (csa->prob != NULL)
         glp_delete_prob(csa->prob);
     /* close log file, if necessary */
+
     /* free the GLPK environment */
     glp_free_env();
     /* return to the control program */
