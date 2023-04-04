@@ -234,7 +234,7 @@ loop: /* read the very first character of the next record */
                strcmp(csa->field, "RANGES")  == 0 ||
                strcmp(csa->field, "BOUNDS")  == 0 ||
                strcmp(csa->field, "ENDATA")  == 0))
-            error(csa, "invalid indicator record\n");
+            error(csa, "invalid indicator record %s\n", csa->field);
          if (!name)
          {  while (csa->c != '\n')
                read_char(csa);

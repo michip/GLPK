@@ -5,7 +5,7 @@
 
 #include <glpk.h>
 
-int runPrimalSimplex(const char *file_path, int tm_lim, int pivot_rule, int ratio_test) {
+int runPrimalSimplex(const char *file_path, int tm_lim, int dir, int pivot_rule, int ratio_test) {
     xprintf("Solving %s \n", file_path);
     xprintf("Time limit: %d \n", tm_lim);
     struct csa _csa, *csa = &_csa;
@@ -58,7 +58,11 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int pivot_rule, int rati
 
     /* Set params */
     csa->in_file = file_path;
+    csa->dir = dir; // Either Min or Max
 
+    //csa->format = FMT_MPS_FILE;
+    //csa->format = FMT_MPS_DECK;
+    //csa->format = FMT_LP;
     csa->format = FMT_MPS_FILE;
     csa->solution = SOL_BASIC;
 
@@ -72,18 +76,20 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int pivot_rule, int rati
     if (pivot_rule == 1) {
         csa->smcp.pricing = GLP_PT_PSE; // Steepest Edge
         xprintf("Using steepest edge pivot.\n");
-    } else if(pivot_rule == 2) {
+    } else if (pivot_rule == 2) {
         csa->smcp.pricing = GLP_PT_STD; // Danzig
         xprintf("Using Danzig pivot.\n");
-    } else xassert(csa != csa);
+    } else
+                xassert (csa != csa);
 
     if (ratio_test == 1) {
         csa->smcp.r_test = GLP_RT_HAR; // Harris' two-pass ratio test
         xprintf("Using Harris two-pass ratio test.\n");
-    } else if(ratio_test == 2) {
+    } else if (ratio_test == 2) {
         csa->smcp.r_test = GLP_RT_STD;; // Standard ratio test
         xprintf("Using standard ratio test.\n");
-    } else xassert(csa != csa);
+    } else
+                xassert (csa != csa);
 
     /* end set parameters */
 
@@ -114,8 +120,23 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int pivot_rule, int rati
             ret = EXIT_FAILURE;
             goto done;
         }
-    } else
-                xassert (csa != csa);
+    } else if (csa->format == FMT_MPS_DECK) {
+        ret = glp_read_mps(csa->prob, GLP_MPS_DECK, NULL,
+                           csa->in_file);
+        if (ret != 0) {
+            xprintf("MPS file processing error\n");
+            ret = EXIT_FAILURE;
+            goto done;
+        }
+    } else if (csa->format == FMT_LP) {
+        ret = glp_read_lp(csa->prob, NULL, csa->in_file);
+        if (ret != 0) {
+            xprintf("CPLEX LP file processing error\n");
+            ret = EXIT_FAILURE;
+            goto done;
+        }
+    } else xassert (csa != csa);
+
     /*--------------------------------------------------------------*/
     /* change problem name, if required */
     if (csa->new_name != NULL)
