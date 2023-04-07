@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <printf.h>
+#include <signal.h>
 #include "callbacks.h"
 
 NEW_ITERATION_CALLBACK newIterationCallback;
