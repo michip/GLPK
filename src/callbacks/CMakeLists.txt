@@ -1,1 +1,1 @@
-target_sources(GLPK PRIVATE callbacks.c callbacks.h)
+target_sources(GLPK PRIVATE callbacks.c callbacks.h dynamic_array.c dynamic_array.h)

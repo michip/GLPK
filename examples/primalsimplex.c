@@ -1,10 +1,14 @@
 #include <stdlib.h>
-#include "glpsol.c"
 #include <limits.h>
 #include <stdio.h>
 
 #include <glpk.h>
+#include "csa.c"
 
+/*
+ * GLP_MIN 1
+ * GLP_MAX 2
+ */
 int runPrimalSimplex(const char *file_path, int tm_lim, int dir, int pivot_rule, int ratio_test) {
     xprintf("Solving %s \n", file_path);
     xprintf("Time limit: %d \n", tm_lim);
@@ -135,7 +139,8 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int dir, int pivot_rule,
             ret = EXIT_FAILURE;
             goto done;
         }
-    } else xassert (csa != csa);
+    } else
+                xassert (csa != csa);
 
     /*--------------------------------------------------------------*/
     /* change problem name, if required */

@@ -947,9 +947,8 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
      * +1 = perturbation is being used */
     int j, refct, ret;
     uint64_t startIterationTime, endIterationTime;
-
+    notify_initial_data(lp);
     startIterationTime = micros();
-
     loop: /* main loop starts here */
     /* compute factorization of the basis matrix */
     if (!lp->valid) {
@@ -1533,18 +1532,6 @@ int spx_primal(glp_prob *P, const glp_smcp *parm) {     /* driver to the primal 
         xassert(P->some != 0);
     }
     skip: /* deallocate working objects and arrays */
-    if(currentIterationData.basis != NULL && currentIterationData.inverse != NULL) {
-        for (int h = 0; h < lp.m; h++) {
-            tfree(currentIterationData.basis[h]);
-            tfree(currentIterationData.inverse[h]);
-        }
-        tfree(currentIterationData.basis);
-        tfree(currentIterationData.inverse);
-    }
-
-    currentIterationData.basis = NULL;
-    currentIterationData.inverse = NULL;
-
     spx_free_lp(csa->lp);
     tfree(map);
     tfree(csa->orig_c);

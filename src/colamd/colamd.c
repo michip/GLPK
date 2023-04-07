@@ -3255,12 +3255,12 @@ PRIVATE void print_report
 
         case COLAMD_ERROR_A_not_present:
 
-            PRINTF(("Array A (row indices of matrix) not present.\n")) ;
+            PRINTF(("DoubleArray A (row indices of matrix) not present.\n")) ;
             break ;
 
         case COLAMD_ERROR_p_not_present:
 
-            PRINTF(("Array p (column pointers for matrix) not present.\n")) ;
+            PRINTF(("DoubleArray p (column pointers for matrix) not present.\n")) ;
             break ;
 
         case COLAMD_ERROR_nrow_negative:
@@ -3285,7 +3285,7 @@ PRIVATE void print_report
 
         case COLAMD_ERROR_A_too_small:
 
-            PRINTF(("Array A too small.\n")) ;
+            PRINTF(("DoubleArray A too small.\n")) ;
             PRINTF(("        Need Alen >= %d, but given only Alen = %d.\n",
             i1, i2)) ;
             break ;

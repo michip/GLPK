@@ -764,11 +764,46 @@ int spx_update_invb(SPXLP *lp, int i, int k) {
     return ret;
 }
 
+void notify_initial_data(struct SPXLP *lp) {
+    if (!initialDataCallback) {
+        return;
+    }
+
+    DoubleArray c;
+    DoubleArray b;
+    DoubleArray A;
+    IntArray A_rows;
+    IntArray A_cols;
+    initDoubleArray(&A, lp->nnz);
+    initDoubleArray(&b, lp->m);
+    initDoubleArray(&c, lp->n);
+
+    initIntArray(&A_cols, lp->nnz);
+    initIntArray(&A_rows, lp->nnz);
+
+    for (int i = 1; i <= lp->m; i++) {
+        insertIntoDoubleArray(&b, lp->b[i]);
+    }
+
+    for (int j = 1; j <= lp->n; j++) { // Cols
+        insertIntoDoubleArray(&c, lp->c[j]);
+        for (int i = lp->A_ptr[j]; i < lp->A_ptr[j + 1]; i++) {
+            insertIntoIntArray(&A_rows, lp->A_ind[i]-1);
+            insertIntoIntArray(&A_cols, j-1);
+            insertIntoDoubleArray(&A, lp->A_val[i]);
+        }
+    }
+
+    initialDataCallback(lp->n, lp->m,
+                        c.array,
+                        A.array, A_rows.array, A_cols.array, lp->nnz,
+                        b.array);
+}
+
 void notify_new_iteration() {
     if (!newIterationCallback) {
         return;
     }
-
     newIterationCallback();
 }
 
@@ -776,7 +811,6 @@ void notify_iteration_time(unsigned int iterationTime) {
     if (!iterationTimeCallback) {
         return;
     }
-
     iterationTimeCallback(iterationTime);
 }
 
@@ -789,9 +823,7 @@ void update_iteration_data(
     if (!iterationCallback) {
         return;
     }
-
-    double **basis = createBasisMatrixShare(lp);
-    double **inverse = createInverseMatrixShare(lp);
+    allocateIterationData(lp);
 
     // Determine zeros in columns
     int *ind = talloc(1 + lp->m, int);
@@ -801,7 +833,9 @@ void update_iteration_data(
         int colNonZeros = jth_col(lp, j, ind, val);
         // Make a full copy of the row in the val variable
         for (int i = 1; i <= colNonZeros; i++) {
-            basis[ind[i]-1][j-1] = val[i]; // Shifting the variables to zero based indexing
+            insertIntoIntArray(&currentIterationData.basisRows, ind[i]-1);
+            insertIntoIntArray(&currentIterationData.basisCols, j-1);
+            insertIntoDoubleArray(&currentIterationData.basis, val[i]);
         }
     }
 
@@ -809,7 +843,11 @@ void update_iteration_data(
         spx_eval_rho(lp, j, val);
 
         for (int i = 1; i <= lp->m; i++) {
-            inverse[j-1][i-1] = val[i]; // Shifting the variables to zero based indexing
+            if(val[i] != 0) {
+                insertIntoIntArray(&currentIterationData.inverseRows, j-1);
+                insertIntoIntArray(&currentIterationData.inverseCols, i-1);
+                insertIntoDoubleArray(&currentIterationData.inverse, val[i]);
+            }
         }
     }
 
@@ -823,8 +861,6 @@ void update_iteration_data(
     }
 
     currentIterationData.m = lp->m;
-    currentIterationData.basis = basis;
-    currentIterationData.inverse = inverse;
     currentIterationData.candidateColumns = candidateColumns;
     currentIterationData.maxReducedCost = maxReducedCost;
 
@@ -837,9 +873,12 @@ void notify_iteration_data() {
     if (!iterationCallback) {
         return;
     }
-
-    iterationCallback(currentIterationData.m, currentIterationData.basis,
-                      currentIterationData.inverse, currentIterationData.candidateColumns,
+    iterationCallback(currentIterationData.m,
+                      currentIterationData.basis.array, currentIterationData.basisRows.array,
+                      currentIterationData.basisCols.array, currentIterationData.basis.used,
+                      currentIterationData.inverse.array, currentIterationData.inverseRows.array,
+                      currentIterationData.inverseCols.array, currentIterationData.inverse.used,
+                      currentIterationData.candidateColumns,
                       currentIterationData.maxReducedCost);
 }
 

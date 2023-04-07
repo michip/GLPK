@@ -90,15 +90,6 @@
 
 typedef struct SPXLP SPXLP;
 
-static struct {
-    int m;
-    double **basis;
-    double **inverse;
-    double maxReducedCost;
-    int candidateColumns;
-
-} currentIterationData;
-
 struct SPXLP {     /* LP problem data and its (current) basis */
     int m;
     /* number of equality constraints, m > 0 */
@@ -160,6 +151,10 @@ struct SPXLP {     /* LP problem data and its (current) basis */
     BFD *bfd;
     /* driver to factorization of the basis matrix */
 };
+
+
+#define notify_initial_data _glp_notify_initial_data
+void notify_initial_data(struct SPXLP *lp);
 
 #define notify_iteration_data _glp_notify_iteration_data
 void notify_iteration_data();
