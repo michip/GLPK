@@ -14,6 +14,7 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int dir, int pivot_rule,
     xprintf("Time limit: %d \n", tm_lim);
     struct csa _csa, *csa = &_csa;
     int ret;
+    int returnStatus = -1;
 
     double start;
     /* perform initialization */
@@ -139,8 +140,9 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int dir, int pivot_rule,
             ret = EXIT_FAILURE;
             goto done;
         }
-    } else
-                xassert (csa != csa);
+    } else {
+        xassert (csa != csa);
+    }
 
     /*--------------------------------------------------------------*/
     /* change problem name, if required */
@@ -201,21 +203,21 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int dir, int pivot_rule,
             if (csa->xcheck) {
                 if (csa->smcp.presolve &&
                     glp_get_status(csa->prob) != GLP_OPT)
-                    xprintf("If you need to check final basis for non-opt"
-                            "imal solution, use --nopresol\n");
+                    xprintf("If you need to check final basis for non-optimal solution, use --nopresol\n");
                 else
                     glp_exact(csa->prob, &csa->smcp);
             }
             if (csa->out_sol != NULL || csa->out_res != NULL) {
                 if (csa->smcp.presolve &&
                     glp_get_status(csa->prob) != GLP_OPT)
-                    xprintf("If you need actual output for non-optimal solut"
-                            "ion, use --nopresol\n");
+                    xprintf("If you need actual output for non-optimal solution, use --nopresol\n");
             }
         } else
             glp_exact(csa->prob, &csa->smcp);
-    } else
-                xassert (csa != csa);
+    } else {
+        xassert (csa != csa);
+    }
+
 
     /*--------------------------------------------------------------*/
     /* display statistics */
@@ -228,6 +230,11 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int dir, int pivot_rule,
                 (double) tpeak / 1048576.0, (double) tpeak);
     }
     done: /* delete the LP/MIP problem object */
+
+    if(ret == EXIT_SUCCESS){
+        returnStatus = glp_get_status(csa->prob);
+    }
+
     if (csa->prob != NULL)
         glp_delete_prob(csa->prob);
     /* close log file, if necessary */
@@ -235,5 +242,5 @@ int runPrimalSimplex(const char *file_path, int tm_lim, int dir, int pivot_rule,
     /* free the GLPK environment */
     glp_free_env();
     /* return to the control program */
-    return ret;
+    return returnStatus;
 }

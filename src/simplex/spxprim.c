@@ -1334,7 +1334,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         notify_new_iteration();
         notify_iteration_data();
         notify_iteration_time(endIterationTime - startIterationTime);
-        xprintf("Logged final iteration because of optimality");
+        xprintf("Logged final iteration because of optimality\n");
     }
 
 
