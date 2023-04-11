@@ -38,6 +38,7 @@ void freeIterationData();
 
 struct ITERATION_DATA {
     int m;
+    unsigned int callbackTimes;
     IntArray basisCols;
     IntArray basisRows;
     DoubleArray basis;

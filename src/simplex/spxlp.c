@@ -23,6 +23,7 @@
 #include "spxlp.h"
 #include "sgf.h"
 #include "callbacks/callbacks.h"
+#include "spxchuzc.h"
 
 static int jth_col(void *info, int j, int ind[], double val[]) {     /* provide column B[j] */
     SPXLP *lp = info;
@@ -804,7 +805,10 @@ void notify_new_iteration() {
     if (!newIterationCallback) {
         return;
     }
+    uint64_t startTime = micros();
     newIterationCallback();
+    uint64_t endTime = micros();
+    currentIterationData.callbackTimes += (endTime - startTime);
 }
 
 void notify_iteration_time(unsigned int iterationTime) {
@@ -823,6 +827,8 @@ void update_iteration_data(
     if (!iterationCallback) {
         return;
     }
+    uint64_t startTime = micros();
+
     allocateIterationData(lp);
 
     // Determine zeros in columns
@@ -848,12 +854,15 @@ void update_iteration_data(
         }
     }
 
+    xfree(ind);
+    xfree(val);
+
     currentIterationData.m = lp->m;
     currentIterationData.candidateColumns = candidateColumns;
     currentIterationData.maxReducedCost = maxReducedCost;
 
-    xfree(ind);
-    xfree(val);
+    uint64_t endTime = micros();
+    currentIterationData.callbackTimes += (endTime - startTime);
 }
 
 
@@ -861,11 +870,15 @@ void notify_iteration_data() {
     if (!iterationCallback) {
         return;
     }
+
+    uint64_t startTime = micros();
     iterationCallback(currentIterationData.m,
                       currentIterationData.basis.array, currentIterationData.basisRows.array,
                       currentIterationData.basisCols.array, currentIterationData.basis.used,
                       currentIterationData.candidateColumns,
                       currentIterationData.maxReducedCost);
+    uint64_t endTime = micros();
+    currentIterationData.callbackTimes += (endTime - startTime);
 }
 
 

@@ -28,6 +28,7 @@
 #include "spxchuzc.h"
 #include "spxchuzr.h"
 #include "spxprob.h"
+#include "callbacks/callbacks.h"
 
 #define CHECK_ACCURACY 0
 /* (for debugging) */
@@ -947,6 +948,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
      * +1 = perturbation is being used */
     int j, refct, ret;
     uint64_t startIterationTime, endIterationTime;
+    unsigned int cleanedTime;
     notify_initial_data(lp);
     startIterationTime = micros();
     loop: /* main loop starts here */
@@ -1324,16 +1326,23 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     notify_new_iteration();
     notify_iteration_data();
     endIterationTime = micros();
-    notify_iteration_time(endIterationTime - startIterationTime);
+    cleanedTime = endIterationTime - startIterationTime;
+    xassert(cleanedTime > currentIterationData.callbackTimes);
+    cleanedTime -= currentIterationData.callbackTimes;
+    notify_iteration_time(cleanedTime);
+    currentIterationData.callbackTimes = 0;
     startIterationTime = micros();
     goto loop;
     fini: /* restore original objective function */
-    endIterationTime = micros();
-
     if (ret == 0) {
         notify_new_iteration();
         notify_iteration_data();
-        notify_iteration_time(endIterationTime - startIterationTime);
+        endIterationTime = micros();
+        cleanedTime = endIterationTime - startIterationTime;
+        xassert(cleanedTime > currentIterationData.callbackTimes);
+        cleanedTime -= currentIterationData.callbackTimes;
+        notify_iteration_time(cleanedTime);
+        currentIterationData.callbackTimes = 0;
         xprintf("Logged final iteration because of optimality\n");
     }
 
