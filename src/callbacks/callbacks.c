@@ -27,36 +27,23 @@ API void setInitialDataCallback(INITIAL_DATA_CALLBACK cb) {
 }
 
 void allocateIterationData(SPXLP *lp) {
-    if (currentIterationData.inverse.array != NULL ||
-        currentIterationData.inverseCols.array != NULL ||
-        currentIterationData.inverseRows.array != NULL ||
-        currentIterationData.basis.array != NULL ||
+    if (currentIterationData.basis.array != NULL ||
         currentIterationData.basisCols.array != NULL ||
         currentIterationData.basisRows.array != NULL) {
         freeIterationData();
     }
-    initDoubleArray(&currentIterationData.inverse, lp->m);
-    initIntArray(&currentIterationData.inverseRows, lp->m);
-    initIntArray(&currentIterationData.inverseCols, lp->m);
-
     initDoubleArray(&currentIterationData.basis, lp->m);
     initIntArray(&currentIterationData.basisRows, lp->m);
     initIntArray(&currentIterationData.basisCols, lp->m);
 }
 
 void freeIterationData() {
-    if (currentIterationData.inverse.array == NULL ||
-        currentIterationData.inverseCols.array == NULL ||
-        currentIterationData.inverseRows.array == NULL ||
-        currentIterationData.basis.array == NULL ||
+    if (currentIterationData.basis.array == NULL ||
         currentIterationData.basisCols.array == NULL ||
         currentIterationData.basisRows.array == NULL) {
         printf("Current iteration data freed before it was filled.");
         exit(SIGABRT);
     }
-    freeDoubleArray(&currentIterationData.inverse);
-    freeIntArray(&currentIterationData.inverseRows);
-    freeIntArray(&currentIterationData.inverseCols);
 
     freeDoubleArray(&currentIterationData.basis);
     freeIntArray(&currentIterationData.basisRows);

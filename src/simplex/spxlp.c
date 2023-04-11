@@ -839,18 +839,6 @@ void update_iteration_data(
         }
     }
 
-    for (int j = 1; j <= lp->m; j++) {
-        spx_eval_rho(lp, j, val);
-
-        for (int i = 1; i <= lp->m; i++) {
-            if(val[i] != 0) {
-                insertIntoIntArray(&currentIterationData.inverseRows, j-1);
-                insertIntoIntArray(&currentIterationData.inverseCols, i-1);
-                insertIntoDoubleArray(&currentIterationData.inverse, val[i]);
-            }
-        }
-    }
-
     // Extract reduced costs.
     double maxReducedCost = 0;
     for (int col = 1; col <= candidateColumns; col++) {
@@ -876,8 +864,6 @@ void notify_iteration_data() {
     iterationCallback(currentIterationData.m,
                       currentIterationData.basis.array, currentIterationData.basisRows.array,
                       currentIterationData.basisCols.array, currentIterationData.basis.used,
-                      currentIterationData.inverse.array, currentIterationData.inverseRows.array,
-                      currentIterationData.inverseCols.array, currentIterationData.inverse.used,
                       currentIterationData.candidateColumns,
                       currentIterationData.maxReducedCost);
 }
