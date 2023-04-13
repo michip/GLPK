@@ -789,8 +789,8 @@ void notify_initial_data(struct SPXLP *lp) {
     for (int j = 1; j <= lp->n; j++) { // Cols
         insertIntoDoubleArray(&c, lp->c[j]);
         for (int i = lp->A_ptr[j]; i < lp->A_ptr[j + 1]; i++) {
-            insertIntoIntArray(&A_rows, lp->A_ind[i]-1);
-            insertIntoIntArray(&A_cols, j-1);
+            insertIntoIntArray(&A_rows, lp->A_ind[i] - 1);
+            insertIntoIntArray(&A_cols, j - 1);
             insertIntoDoubleArray(&A, lp->A_val[i]);
         }
     }
@@ -828,10 +828,9 @@ void update_iteration_data(
         return;
     }
     uint64_t startTime = micros();
-
     allocateIterationData(lp);
 
-    // Determine zeros in columns
+    // Create the basis matrix (for python)
     int *ind = talloc(1 + lp->m, int);
     double *val = talloc(1 + lp->m, double);
 
@@ -839,11 +838,14 @@ void update_iteration_data(
         int colNonZeros = jth_col(lp, j, ind, val);
         // Make a full copy of the row in the val variable
         for (int i = 1; i <= colNonZeros; i++) {
-            insertIntoIntArray(&currentIterationData.basisRows, ind[i]-1);
-            insertIntoIntArray(&currentIterationData.basisCols, j-1);
+            insertIntoIntArray(&currentIterationData.basisRows, ind[i] - 1);
+            insertIntoIntArray(&currentIterationData.basisCols, j - 1);
             insertIntoDoubleArray(&currentIterationData.basis, val[i]);
         }
     }
+
+    xfree(ind);
+    xfree(val);
 
     // Extract reduced costs.
     double maxReducedCost = 0;
@@ -854,13 +856,10 @@ void update_iteration_data(
         }
     }
 
-    xfree(ind);
-    xfree(val);
-
     currentIterationData.m = lp->m;
     currentIterationData.candidateColumns = candidateColumns;
     currentIterationData.maxReducedCost = maxReducedCost;
-
+    currentIterationData.conditionNumberOneNorm = bfd_condest(lp->bfd);
     uint64_t endTime = micros();
     currentIterationData.callbackTimes += (endTime - startTime);
 }
@@ -876,7 +875,8 @@ void notify_iteration_data() {
                       currentIterationData.basis.array, currentIterationData.basisRows.array,
                       currentIterationData.basisCols.array, currentIterationData.basis.used,
                       currentIterationData.candidateColumns,
-                      currentIterationData.maxReducedCost);
+                      currentIterationData.maxReducedCost,
+                      currentIterationData.conditionNumberOneNorm);
     uint64_t endTime = micros();
     currentIterationData.callbackTimes += (endTime - startTime);
 }

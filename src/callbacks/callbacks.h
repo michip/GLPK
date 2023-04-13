@@ -11,10 +11,14 @@
 #endif
 typedef void (*NEW_ITERATION_CALLBACK)();
 // m, A_B, A_B^-1, #candidateColumns, absMaxReducedCost
-typedef void (*ITERATION_DATA_CALLBACK)(int,
+typedef void (*ITERATION_DATA_CALLBACK)(
+        int,
         double *, int *, int *, int, // basis
         //double *, int *, int *, int, //inverse
-        int, double);
+        int, // candidate columns
+        double, // max reduced cost
+        double // condition number (under 1-norm)
+        );
 typedef void (*ITERATION_TIME_CALLBACK)(unsigned int);
 typedef void (*INITIAL_DATA_CALLBACK)(
         int, int, // n, m
@@ -43,6 +47,7 @@ struct ITERATION_DATA {
     IntArray basisRows;
     DoubleArray basis;
     double maxReducedCost;
+    double conditionNumberOneNorm;
     int candidateColumns;
 };
 
