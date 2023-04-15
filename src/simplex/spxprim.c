@@ -1327,7 +1327,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     notify_iteration_data();
     endIterationTime = micros();
     cleanedTime = endIterationTime - startIterationTime;
-    xassert(cleanedTime > currentIterationData.callbackTimes);
+    xassert(cleanedTime >= currentIterationData.callbackTimes);
     cleanedTime -= currentIterationData.callbackTimes;
     notify_iteration_time(cleanedTime);
     currentIterationData.callbackTimes = 0;
@@ -1339,7 +1339,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
         notify_iteration_data();
         endIterationTime = micros();
         cleanedTime = endIterationTime - startIterationTime;
-        xassert(cleanedTime > currentIterationData.callbackTimes);
+        xassert(cleanedTime >= currentIterationData.callbackTimes);
         cleanedTime -= currentIterationData.callbackTimes;
         notify_iteration_time(cleanedTime);
         currentIterationData.callbackTimes = 0;
