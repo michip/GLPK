@@ -5,30 +5,6 @@
 #include <glpk.h>
 #include "csa.c"
 
-typedef struct {
-    double rhs, pi;
-} v_data;
-typedef struct {
-    double low, cap, cost, x;
-} a_data;
-
-void convertMaxFlowProblem(const char *input_file, const char *output_file) {
-    glp_graph *G;
-    glp_prob *P;
-    int s, t;
-    G = glp_create_graph(sizeof(v_data), sizeof(a_data));
-    int ret = glp_read_maxflow(G, &s, &t, offsetof(a_data, cap), input_file);
-    if (ret != 0) {
-        return;
-    }
-    P = glp_create_prob();
-    glp_maxflow_lp(P, G, GLP_ON, s, t, offsetof(a_data, cap));
-    glp_set_prob_name(P, input_file);
-    glp_delete_graph(G);
-    glp_write_mps(P, GLP_MPS_FILE, NULL, output_file);
-    glp_delete_prob(P);
-}
-
 /*
  * GLP_MIN 1
  * GLP_MAX 2

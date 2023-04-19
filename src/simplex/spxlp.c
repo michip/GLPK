@@ -860,6 +860,8 @@ void update_iteration_data(
     currentIterationData.candidateColumns = candidateColumns;
     currentIterationData.maxReducedCost = maxReducedCost;
     currentIterationData.conditionNumberOneNorm = bfd_condest(lp->bfd);
+    currentIterationData.oneNorm = bfd_b_norm(lp->bfd);
+    currentIterationData.inverseOneNorm = bfd_i_norm(lp->bfd);
     uint64_t endTime = micros();
     currentIterationData.callbackTimes += (endTime - startTime);
 }
@@ -876,7 +878,9 @@ void notify_iteration_data() {
                       currentIterationData.basisCols.array, currentIterationData.basis.used,
                       currentIterationData.candidateColumns,
                       currentIterationData.maxReducedCost,
-                      currentIterationData.conditionNumberOneNorm);
+                      currentIterationData.conditionNumberOneNorm,
+                      currentIterationData.oneNorm,
+                      currentIterationData.inverseOneNorm);
     uint64_t endTime = micros();
     currentIterationData.callbackTimes += (endTime - startTime);
 }
