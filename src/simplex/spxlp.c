@@ -819,6 +819,47 @@ void notify_iteration_time(unsigned int iterationTime) {
 }
 
 
+void update_pivot_data(struct SPXLP *lp, int p, int q) {
+    if (!iterationCallback) {
+        return;
+    }
+    uint64_t startTime = micros();
+
+    double *val = talloc(1 + lp->m, double);
+    spx_eval_tcol(lp, q, val);
+    /*
+    int k = 0;
+    for (int i = lp->A_ptr[lp->head[lp->m + q]]; i < lp->A_ptr[lp->head[lp->m + q] + 1]; i++) {
+        if(k < lp->A_ind[i]-1) {
+            for (; k < lp->A_ind[i] - 1; k++) {
+                insertIntoDoubleArray(&currentIterationData.u, 0);
+            }
+        }
+        k++;
+        insertIntoDoubleArray(&currentIterationData.u, lp->A_val[i]);
+    }
+    if(k < lp->m) {
+        for (; k < lp->m; k++) {
+            insertIntoDoubleArray(&currentIterationData.u, 0);
+        }
+    }*/
+
+    //xprintf("%d used %d", currentIterationData.u.used, k);
+    //xassert(currentIterationData.u.used == lp->m);
+
+    for (int j = 1; j <= lp->m; j++) {
+        insertIntoDoubleArray(&currentIterationData.u, -val[j]);
+    }
+
+    //insertIntoDoubleArray(&currentIterationData.u, p);
+    //insertIntoDoubleArray(&currentIterationData.u, lp->head[lp->m + q]-1);
+
+    uint64_t endTime = micros();
+    currentIterationData.callbackTimes += (endTime - startTime);
+
+    xfree(val);
+}
+
 void update_iteration_data(
         struct SPXLP *lp,
         int candidateColumns,
@@ -876,6 +917,7 @@ void notify_iteration_data() {
     iterationCallback(currentIterationData.m,
                       currentIterationData.basis.array, currentIterationData.basisRows.array,
                       currentIterationData.basisCols.array, currentIterationData.basis.used,
+                      currentIterationData.u.array,
                       currentIterationData.candidateColumns,
                       currentIterationData.maxReducedCost,
                       currentIterationData.conditionNumberOneNorm,

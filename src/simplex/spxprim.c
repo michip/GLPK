@@ -1169,6 +1169,8 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     else
         csa->ls_cnt++;
 
+    update_pivot_data(lp, csa->p, csa->q);
+
     /* check for unboundedness */
     if (csa->p == 0) {
         if (perturb > 0) {  /* remove perturbation */
@@ -1243,6 +1245,7 @@ static int primal_simplex(struct csa *csa) {     /* primal simplex method main l
     /* p < 0 means that xN[q] jumps to its opposite bound */
     if (csa->p < 0)
         goto skip;
+
     /* xN[q] enters and xB[p] leaves the basis */
     /* compute p-th row of inv(B) */
     spx_eval_rho(lp, csa->p, rho);

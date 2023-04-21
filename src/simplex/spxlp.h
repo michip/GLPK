@@ -165,6 +165,9 @@ void update_iteration_data(struct SPXLP *lp,
                            const double *reducedCosts,
                            const int *reducedCostsIndices);
 
+#define update_pivot_data _glp_update_pivot_data
+void update_pivot_data(struct SPXLP *lp, int p, int q);
+
 #define notify_new_iteration _glp_notify_new_iteration
 void notify_new_iteration();
 
